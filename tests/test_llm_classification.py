@@ -184,7 +184,7 @@ def test_llm_metadata_and_fields_enter_business_pipeline(client) -> None:
     assert document["business_reference"] == "INV-LLM-001"
     assert document["evidence"]["classification"]["provider"] == "mock"
     assert document["evidence"]["classification"]["model"] == "mock-v1"
-    assert document["evidence"]["classification"]["prompt_version"] == "v1"
+    assert document["evidence"]["classification"]["prompt_version"] == "v2"
     assert document["evidence"]["classification"]["schema_version"] == "v1"
     assert "customer_id" not in document["evidence"]["classification"]["extracted_fields"]
     assert document["evidence"]["classification"]["customer_candidates"] == {
@@ -550,33 +550,33 @@ def test_prompt_explicitly_requires_complete_llm_analysis_contract() -> None:
     assert "up to five concise strings" in system_prompt
     assert "do not provide hidden chain-of-thought" in system_prompt
     assert "extracted_fields MUST contain only canonical fields belonging to the classified document type" in system_prompt
-    assert "tax and sales_tax are finite recognized aliases for tax_amount" in system_prompt
-    assert "payment_terms, order_number, or order_date" in system_prompt
+    assert "Assessor's Parcel Number to apn" in system_prompt
+    assert "MUST go into supplemental_information as objects with exactly name, value, and source=document" in system_prompt
     assert "Do not duplicate canonical fields or canonical aliases into supplemental_information" in system_prompt
     assert "Never place customer_id, customer_name, sender identity, account identity, or any customer identifier in extracted_fields or supplemental_information" in system_prompt
     assert "Do not duplicate canonical fields or canonical aliases into supplemental_information" in system_prompt
     assert "All customer identifiers belong only in customer_candidates" in system_prompt
     assert "use UNKNOWN" in system_prompt
-    assert '"document_type":"REMITTANCE"' in system_prompt
-    assert '"confidence":0.92' in system_prompt
+    assert '"document_type":"LISTING_AGREEMENT"' in system_prompt
+    assert '"confidence":0.94' in system_prompt
     assert '"document_type":"UNKNOWN"' in system_prompt
     assert "The application supplies provider, model, prompt_version, schema_version" in system_prompt
-    assert "For PAYMENT_ADVICE, extracted_fields MUST use exactly these canonical keys" in system_prompt
-    assert "payment_reference (string or null)" in system_prompt
-    assert "Do not emit payment_advice_number" in system_prompt
-    assert '"payment_reference":"PAY-001"' in system_prompt
-    assert "For CREDIT_NOTE and DEBIT_NOTE" in system_prompt
-    assert "note_number (string or null)" in system_prompt
-    assert "Do not emit credit_note_number" in system_prompt
-    assert "Do not emit credit_note_date" in system_prompt
-    assert "Do not emit debit_note_number" in system_prompt
-    assert "Do not emit debit_note_date" in system_prompt
-    assert "Map a source label such as Credit Amount or Debit Amount to adjustment_amount" in system_prompt
-    assert "For BANK_STATEMENT" in system_prompt
-    assert "statement_start_date (ISO date string or null)" in system_prompt
-    assert "statement_end_date (ISO date string or null)" in system_prompt
-    assert "Do not emit statement_number in extracted_fields" in system_prompt
-    assert "retain it only in supplemental_information" in system_prompt
+    assert "Each listing document type adds only its own delta fields" in system_prompt
+    assert "LISTING_AGREEMENT (residential listing agreement, CAR RLA)" in system_prompt
+    assert "listing_price (number or null)" in system_prompt
+    assert "CA_TDS (transfer disclosure statement, CAR TDS)" in system_prompt
+    assert "disclosure_signed (boolean or null)" in system_prompt
+    assert "CA_SPQ (seller property questionnaire, CAR SPQ)" in system_prompt
+    assert "questionnaire_complete (boolean or null)" in system_prompt
+    assert "CA_NHD (natural hazard disclosure report)" in system_prompt
+    assert "hazards_disclosed (boolean or null)" in system_prompt
+    assert "HOA_PACKAGE (HOA resale package: CC&Rs, budget, minutes)" in system_prompt
+    assert "hoa_name (string or null)" in system_prompt
+    assert "PRELIM_TITLE_REPORT (preliminary title report)" in system_prompt
+    assert "title_company (string or null)" in system_prompt
+    assert "SOLAR_AGREEMENT (solar ownership or financing agreement)" in system_prompt
+    assert "ownership_type (string or null; owned, leased, or PPA)" in system_prompt
+    assert "Do not emit keys outside the classified type's vocabulary" in system_prompt
 
 
 def test_payment_advice_canonical_fields_validate_and_drive_required_field_check() -> None:

@@ -36,6 +36,65 @@ SUPPLEMENTAL_FIELDS: dict[DocumentType, set[str]] = {
 }
 
 
+#: Listing document types share one base extraction vocabulary, so their
+#: deterministic aliases are shared too.  Per-type aliases can extend these
+#: later.
+LISTING_ALIASES: dict[str, str] = {
+    "property_address_line": "property_address",
+    "assessor_parcel_number": "apn",
+    "parcel_number": "apn",
+    "apn_number": "apn",
+    "seller": "seller_name",
+    "owner_name": "seller_name",
+    "doc_date": "document_date",
+    "date_of_document": "document_date",
+    "agent_name": "listing_agent_name",
+    "brokerage": "brokerage_name",
+    "signed": "signatures_present",
+    "is_signed": "signatures_present",
+}
+
+LISTING_DOCUMENT_TYPES: tuple[DocumentType, ...] = (
+    DocumentType.LISTING_AGREEMENT,
+    DocumentType.SELLER_ADVISORY,
+    DocumentType.AGENCY_DISCLOSURE,
+    DocumentType.CA_TDS,
+    DocumentType.CA_SPQ,
+    DocumentType.AGENT_VISUAL_INSPECTION,
+    DocumentType.CA_NHD,
+    DocumentType.WCMD_ADVISORY,
+    DocumentType.LEAD_DISCLOSURE,
+    DocumentType.HOA_PACKAGE,
+    DocumentType.PRELIM_TITLE_REPORT,
+    DocumentType.SOLAR_AGREEMENT,
+)
+
+for _listing_document_type in LISTING_DOCUMENT_TYPES:
+    ALIASES.setdefault(_listing_document_type, {}).update(LISTING_ALIASES)
+
+#: Diagnostic schema names used in semantic-resolution metadata.
+_SCHEMA_NAMES: dict[DocumentType, str] = {
+    DocumentType.REMITTANCE: "RemittanceFields",
+    DocumentType.INVOICE: "InvoiceFields",
+    DocumentType.PAYMENT_ADVICE: "PaymentAdviceFields",
+    DocumentType.CREDIT_NOTE: "NoteFields",
+    DocumentType.DEBIT_NOTE: "NoteFields",
+    DocumentType.BANK_STATEMENT: "BankStatementFields",
+    DocumentType.LISTING_AGREEMENT: "ListingAgreementFields",
+    DocumentType.SELLER_ADVISORY: "SellerAdvisoryFields",
+    DocumentType.AGENCY_DISCLOSURE: "AgencyDisclosureFields",
+    DocumentType.CA_TDS: "TDSFields",
+    DocumentType.CA_SPQ: "SPQFields",
+    DocumentType.AGENT_VISUAL_INSPECTION: "AgentVisualInspectionFields",
+    DocumentType.CA_NHD: "NHDFields",
+    DocumentType.WCMD_ADVISORY: "WCMDFields",
+    DocumentType.LEAD_DISCLOSURE: "LeadDisclosureFields",
+    DocumentType.HOA_PACKAGE: "HOAPackageFields",
+    DocumentType.PRELIM_TITLE_REPORT: "PrelimTitleFields",
+    DocumentType.SOLAR_AGREEMENT: "SolarAgreementFields",
+}
+
+
 class SemanticFieldResolver:
     def __init__(self, semantic_mapper: Callable[..., dict[str, Any] | None] | None = None) -> None:
         self.semantic_mapper = semantic_mapper
@@ -104,7 +163,7 @@ class SemanticFieldResolver:
             canonical[target] = source_value
         unresolved = [m for m in mappings if m.mapping_status in {"UNMAPPED", "AMBIGUOUS"}]
         if unresolved:
-            metadata = {"semantic_field_mappings": [{"source_field": m.source_field, "canonical_field": m.canonical_field, "mapping_method": m.mapping_method, "mapping_status": m.mapping_status, "evidence": m.evidence} for m in mappings], "document_field_validation": {"schema": {DocumentType.REMITTANCE: "RemittanceFields", DocumentType.INVOICE: "InvoiceFields", DocumentType.PAYMENT_ADVICE: "PaymentAdviceFields", DocumentType.CREDIT_NOTE: "NoteFields", DocumentType.DEBIT_NOTE: "NoteFields", DocumentType.BANK_STATEMENT: "BankStatementFields"}.get(document_type, "UnknownFields"), "received_top_level_fields": sorted(raw_fields), "received_field_types": {str(k): type(v).__name__ for k, v in raw_fields.items()}, "validation_errors": [{"field_path": [m.source_field], "error_type": "ambiguous" if m.mapping_status == "AMBIGUOUS" else "extra_forbidden", "expected": None, "received_type": type(m.source_value).__name__} for m in unresolved] + [{"field_path": [name], "error_type": "extra_forbidden", "expected": None, "received_type": type(value).__name__} for name, value in raw_fields.items() if name not in {m.source_field for m in unresolved}]}}
+            metadata = {"semantic_field_mappings": [{"source_field": m.source_field, "canonical_field": m.canonical_field, "mapping_method": m.mapping_method, "mapping_status": m.mapping_status, "evidence": m.evidence} for m in mappings], "document_field_validation": {"schema": _SCHEMA_NAMES.get(document_type, "UnknownFields"), "received_top_level_fields": sorted(raw_fields), "received_field_types": {str(k): type(v).__name__ for k, v in raw_fields.items()}, "validation_errors": [{"field_path": [m.source_field], "error_type": "ambiguous" if m.mapping_status == "AMBIGUOUS" else "extra_forbidden", "expected": None, "received_type": type(m.source_value).__name__} for m in unresolved] + [{"field_path": [name], "error_type": "extra_forbidden", "expected": None, "received_type": type(value).__name__} for name, value in raw_fields.items() if name not in {m.source_field for m in unresolved}]}}
             for item in unresolved:
                 if item.source_field in {"tax", "sales_tax"} and item.canonical_field is None:
                     metadata["canonical_alias_conflict"] = {"alias": item.source_field, "canonical": "tax_amount"}

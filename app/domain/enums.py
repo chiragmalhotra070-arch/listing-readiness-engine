@@ -85,6 +85,12 @@ class DocumentType(str, Enum):
     HOA_PACKAGE = "HOA_PACKAGE"
     PRELIM_TITLE_REPORT = "PRELIM_TITLE_REPORT"
     SOLAR_AGREEMENT = "SOLAR_AGREEMENT"
+    # Tier-1 additions from the listing-document research (2026-10-06):
+    # present in virtually every California listing file.
+    SELLER_ADVISORY = "SELLER_ADVISORY"
+    AGENCY_DISCLOSURE = "AGENCY_DISCLOSURE"
+    AGENT_VISUAL_INSPECTION = "AGENT_VISUAL_INSPECTION"
+    WCMD_ADVISORY = "WCMD_ADVISORY"
 
 
 class ReadinessVerdict(str, Enum):

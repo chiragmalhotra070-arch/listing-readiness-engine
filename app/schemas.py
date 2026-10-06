@@ -292,3 +292,125 @@ class EmailIntakeResponse(BaseModel):
     n8n_execution_id: Optional[str] = None
     documents: list[DocumentResult]
     idempotent: bool = False
+
+
+# ---------------------------------------------------------------------------
+# Listing extraction schemas (California MVP)
+#
+# One base schema standardized across all listing documents, plus small
+# per-type deltas.  The demo tracks every document with the same classified
+# strategy: the base fields are the common vocabulary shared by the
+# classifier, the semantic field resolver and the requirement engine;
+# per-type fields carry only what is specific to that document.
+#
+# Field set comes from the listing-document research (2026-10-06):
+# Tier-1 universal, Tier-2 conditional and Tier-3 realtor-variable lists.
+# ---------------------------------------------------------------------------
+
+
+class ListingDocumentFields(BaseModel):
+    """Fields common to every listing document."""
+
+    property_address: Optional[str] = None
+    apn: Optional[str] = None
+    seller_name: Optional[str] = None
+    document_date: Optional[date] = None
+    listing_agent_name: Optional[str] = None
+    brokerage_name: Optional[str] = None
+    signatures_present: Optional[bool] = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class ListingAgreementFields(ListingDocumentFields):
+    """Residential Listing Agreement (CAR RLA)."""
+
+    listing_price: Optional[float] = None
+    listing_start_date: Optional[date] = None
+    listing_end_date: Optional[date] = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class SellerAdvisoryFields(ListingDocumentFields):
+    """Seller's Advisory (CAR SA) -- pre-listing advisory."""
+
+    advisory_acknowledged: Optional[bool] = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class AgencyDisclosureFields(ListingDocumentFields):
+    """Disclosure Regarding Real Estate Agency Relationships (CAR AD)."""
+
+    agency_relationship: Optional[str] = None
+    disclosure_signed: Optional[bool] = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class TDSFields(ListingDocumentFields):
+    """Transfer Disclosure Statement (CAR TDS)."""
+
+    disclosure_signed: Optional[bool] = None
+    disclosure_date: Optional[date] = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class SPQFields(ListingDocumentFields):
+    """Seller Property Questionnaire (CAR SPQ)."""
+
+    questionnaire_complete: Optional[bool] = None
+    completion_date: Optional[date] = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class AgentVisualInspectionFields(ListingDocumentFields):
+    """Agent Visual Inspection Disclosure (CAR AVID)."""
+
+    inspection_date: Optional[date] = None
+    inspection_complete: Optional[bool] = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class NHDFields(ListingDocumentFields):
+    """Natural Hazard Disclosure report + signed statement/receipt."""
+
+    report_date: Optional[date] = None
+    hazards_disclosed: Optional[bool] = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class WCMDFields(ListingDocumentFields):
+    """Water-conserving plumbing fixtures & CO detector advisory (WCMD)."""
+
+    fixtures_compliant: Optional[bool] = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class LeadDisclosureFields(ListingDocumentFields):
+    """Lead-based paint disclosure (federal; triggered pre-1978)."""
+
+    pamphlet_acknowledged: Optional[bool] = None
+    disclosure_date: Optional[date] = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class HOAPackageFields(ListingDocumentFields):
+    """HOA resale package (CC&Rs, budget, minutes)."""
+
+    hoa_name: Optional[str] = None
+    package_date: Optional[date] = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class PrelimTitleFields(ListingDocumentFields):
+    """Preliminary title report."""
+
+    title_company: Optional[str] = None
+    report_date: Optional[date] = None
+    model_config = ConfigDict(extra="forbid")
+
+
+class SolarAgreementFields(ListingDocumentFields):
+    """Solar ownership / financing agreement."""
+
+    ownership_type: Optional[str] = None  # owned | leased | PPA
+    provider_name: Optional[str] = None
+    model_config = ConfigDict(extra="forbid")

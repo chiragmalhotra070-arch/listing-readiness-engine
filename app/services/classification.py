@@ -8,7 +8,26 @@ from pydantic import ValidationError
 from app.adapters.llm import LLMError, LLMRequest, LLMProvider, build_llm_provider
 from app.config import Settings
 from app.domain.enums import DocumentType
-from app.schemas import BankStatementFields, CustomerCandidates, InvoiceFields, NoteFields, PaymentAdviceFields, RemittanceFields
+from app.schemas import (
+    AgentVisualInspectionFields,
+    AgencyDisclosureFields,
+    BankStatementFields,
+    CustomerCandidates,
+    HOAPackageFields,
+    InvoiceFields,
+    LeadDisclosureFields,
+    ListingAgreementFields,
+    NHDFields,
+    NoteFields,
+    PaymentAdviceFields,
+    PrelimTitleFields,
+    RemittanceFields,
+    SellerAdvisoryFields,
+    SolarAgreementFields,
+    SPQFields,
+    TDSFields,
+    WCMDFields,
+)
 from app.services.semantic_fields import SemanticFieldResolver
 
 
@@ -75,6 +94,18 @@ class LLMDocumentClassifier(DocumentClassifier):
             DocumentType.CREDIT_NOTE: NoteFields,
             DocumentType.DEBIT_NOTE: NoteFields,
             DocumentType.BANK_STATEMENT: BankStatementFields,
+            DocumentType.LISTING_AGREEMENT: ListingAgreementFields,
+            DocumentType.SELLER_ADVISORY: SellerAdvisoryFields,
+            DocumentType.AGENCY_DISCLOSURE: AgencyDisclosureFields,
+            DocumentType.CA_TDS: TDSFields,
+            DocumentType.CA_SPQ: SPQFields,
+            DocumentType.AGENT_VISUAL_INSPECTION: AgentVisualInspectionFields,
+            DocumentType.CA_NHD: NHDFields,
+            DocumentType.WCMD_ADVISORY: WCMDFields,
+            DocumentType.LEAD_DISCLOSURE: LeadDisclosureFields,
+            DocumentType.HOA_PACKAGE: HOAPackageFields,
+            DocumentType.PRELIM_TITLE_REPORT: PrelimTitleFields,
+            DocumentType.SOLAR_AGREEMENT: SolarAgreementFields,
         }.get(document_type)
 
     @classmethod

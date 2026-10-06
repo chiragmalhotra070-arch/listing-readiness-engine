@@ -5,15 +5,17 @@ services:
       POSTGRES_DB: listing_engine
       POSTGRES_USER: engine
       POSTGRES_PASSWORD: engine
-    ports: ["5432:5432"]
+    ports: ["5454:5432"]
     volumes: ["postgres_data:/var/lib/postgresql/data"]
+    restart: unless-stopped
   api:
     build: .
     depends_on: [db]
-    ports: ["127.0.0.1:8010:8010"]
+    restart: unless-stopped
+    ports: ["127.0.0.1:8011:8010"]
     volumes: ["documents_data:/var/lib/financial-engine/documents"]
     environment:
-      DATABASE_URL: postgresql+psycopg://engine:engine@db:5432/financial_engine_v2
+      DATABASE_URL: postgresql+psycopg://engine:engine@db:5432/listing_engine
       APP_ENV: development
       PROCESSING_MODE: async
       INTAKE_API_KEY: dev-intake-key
@@ -27,7 +29,7 @@ services:
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-30}
       LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-2000}
       LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0}
-      LLM_PROMPT_VERSION: ${LLM_PROMPT_VERSION:-v1}
+      LLM_PROMPT_VERSION: ${LLM_PROMPT_VERSION:-v2}
       LLM_SCHEMA_VERSION: ${LLM_SCHEMA_VERSION:-v1}
       LLM_RESPONSE_FORMAT: ${LLM_RESPONSE_FORMAT:-json_object}
       LLM_INCLUDE_TEMPERATURE: ${LLM_INCLUDE_TEMPERATURE:-false}
@@ -46,7 +48,7 @@ services:
     depends_on: [db]
     volumes: ["documents_data:/var/lib/financial-engine/documents"]
     environment:
-      DATABASE_URL: postgresql+psycopg://engine:engine@db:5432/financial_engine_v2
+      DATABASE_URL: postgresql+psycopg://engine:engine@db:5432/listing_engine
       APP_ENV: development
       PROCESSING_MODE: async
       INTAKE_API_KEY: dev-intake-key
@@ -60,7 +62,7 @@ services:
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-30}
       LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-2000}
       LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0}
-      LLM_PROMPT_VERSION: ${LLM_PROMPT_VERSION:-v1}
+      LLM_PROMPT_VERSION: ${LLM_PROMPT_VERSION:-v2}
       LLM_SCHEMA_VERSION: ${LLM_SCHEMA_VERSION:-v1}
       LLM_RESPONSE_FORMAT: ${LLM_RESPONSE_FORMAT:-json_object}
       LLM_INCLUDE_TEMPERATURE: ${LLM_INCLUDE_TEMPERATURE:-false}

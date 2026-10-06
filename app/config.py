@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = 30.0
     llm_max_tokens: int = 2000
     llm_temperature: float = 0.0
-    llm_prompt_version: str = "v1"
+    llm_prompt_version: str = "v2"  # v2: listing taxonomy swap (2026-10-06)
     llm_schema_version: str = "v1"
     llm_response_format: str = "json_object"
     llm_include_temperature: bool = False

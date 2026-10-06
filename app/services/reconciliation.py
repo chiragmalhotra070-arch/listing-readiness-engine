@@ -177,3 +177,29 @@ def reconcile_listing_file(session: Session, listing_file: ListingFile) -> Recon
             document.id for document in documents if document.id not in matched_document_ids
         ),
     )
+
+
+def unmatched_document_ids(session: Session, listing_file: ListingFile) -> list[int]:
+    """This file's document ids with no ``Evidence`` row yet.
+
+    Read-only projection of ``reconcile_listing_file``'s own output: a
+    document is unmatched when no requirement has bound it -- an ``UNKNOWN``
+    classification, an accepted type no requirement was open for, or a
+    document uploaded since the last pass.  Reading the same table the
+    matcher writes keeps the GET readout from re-implementing matching.
+    """
+    used = {
+        row[0]
+        for row in session.query(Evidence.document_id)
+        .join(Document, Evidence.document_id == Document.id)
+        .filter(Document.listing_file_id == listing_file.id)
+        .distinct()
+        .all()
+    }
+    return sorted(
+        row[0]
+        for row in session.query(Document.id)
+        .filter(Document.listing_file_id == listing_file.id)
+        .all()
+        if row[0] not in used
+    )

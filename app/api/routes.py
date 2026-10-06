@@ -3,20 +3,29 @@ from __future__ import annotations
 import base64
 import binascii
 import hmac
+from dataclasses import asdict
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Request, UploadFile
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from app.config import get_settings
-from app.db.models import Document
+from app.db.models import Document, ListingFile, Requirement
+from app.domain.enums import DocumentType, ProcessingStage
 from app.db.session import get_db
-from app.schemas import AuditEventResponse, DocumentInput, DocumentResult, EmailIntakeRequest, EmailIntakeResponse, N8nIngestRequest, ProcessingAttemptResponse
+from app.schemas import AuditEventResponse, DocumentInput, DocumentResult, EmailIntakeRequest, EmailIntakeResponse, ListingFileCreate, ListingFileCreated, ListingFileReadout, DocumentClassified, DocumentExtracted, DocumentUploaded, N8nIngestRequest, ProcessingAttemptResponse, ReconciliationReport, RequirementListResponse, VerdictResponse, RequirementSummary
+from app.adapters.document_parser import DocumentFormatError, DocumentParser
+from app.adapters.llm import LLMError
+from app.services.classification import LLMDocumentClassifier
 from app.services.pipeline import DocumentPipeline
+from app.services.readiness import compute_verdict
+from app.services.reconciliation import document_type_value, reconcile_listing_file, unmatched_document_ids
+from app.services.requirement_catalog import ensure_ca_catalog
+from app.services.requirement_engine import RequirementEngine
 from app.services.storage import LocalDocumentStorage, StorageError
-from app.services.text_sanitization import NulByteRejectedError
+from app.services.text_sanitization import NulByteRejectedError, ensure_jsonb_value, sanitize_persisted_text
 
 router = APIRouter()
 
@@ -311,3 +320,268 @@ def process_document(document_id: int, db: Session = Depends(get_db)) -> Documen
         return DocumentPipeline(get_settings()).process_document_action(document_id, db)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+def persist_or_422(db: Session) -> None:
+    """Flush the current unit of work, mapping NUL rejections to HTTP 422.
+
+    The persistence boundary (``sanitize_session_text``) refuses a NUL byte in
+    any structured or JSONB column; here that refusal becomes a client error
+    instead of a 500.
+    """
+    try:
+        db.flush()
+    except NulByteRejectedError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.post("/listing-files", response_model=ListingFileCreated, status_code=201, dependencies=[Depends(require_intake_api_key)])
+def create_listing_file(payload: ListingFileCreate, db: Session = Depends(get_db)) -> ListingFileCreated:
+    """Stage 1 of the listing workflow: create the file.
+
+    Deliberately does *not* generate requirements -- generation is its own
+    visible stage (and is idempotent), so the orchestrator can show it.
+    """
+    ensure_jsonb_value(payload.property_attributes, "listing_files.property_attributes")
+    listing_file = ListingFile(
+        property_address=payload.property_address,
+        apn=payload.apn,
+        seller_name=payload.seller_name,
+        property_attributes=payload.property_attributes,
+    )
+    db.add(listing_file)
+    persist_or_422(db)
+    db.commit()
+    return ListingFileCreated(id=listing_file.id)
+
+
+@router.post("/listing-files/{listing_file_id}/generate-requirements", response_model=RequirementListResponse, dependencies=[Depends(require_intake_api_key)])
+def generate_listing_requirements(listing_file_id: int, db: Session = Depends(get_db)) -> RequirementListResponse:
+    """Stage 2: seed the catalog and generate the file's requirements.
+
+    Idempotent (get-or-create, never clobbers state), so the orchestrator
+    can re-run it without damage.  Does not touch evidence or the verdict.
+    """
+    listing_file = db.get(ListingFile, listing_file_id)
+    if listing_file is None:
+        raise HTTPException(status_code=404, detail="listing file not found")
+    ensure_ca_catalog(db)
+    requirements = RequirementEngine().generate(db, listing_file)
+    db.commit()
+    return RequirementListResponse(
+        requirements=[
+            RequirementSummary(
+                requirement_key=requirement.requirement_key,
+                requirement_type=requirement.requirement_type,
+                status=requirement.status,
+                state=requirement.state,
+            )
+            for requirement in requirements
+        ]
+    )
+
+
+@router.post("/listing-files/{listing_file_id}/documents", response_model=DocumentUploaded, status_code=201, dependencies=[Depends(require_intake_api_key)])
+async def upload_listing_document(listing_file_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)) -> DocumentUploaded:
+    """Stage 3: store one document and record it against the file.
+
+    Validated and stored through the same helpers as chassis intake; the row
+    starts ``UNKNOWN`` and unclassified -- classification is its own stage.
+    """
+    listing_file = db.get(ListingFile, listing_file_id)
+    if listing_file is None:
+        raise HTTPException(status_code=404, detail="listing file not found")
+    filename = file.filename or ""
+    if not filename:
+        raise HTTPException(status_code=422, detail="file name is required")
+    if len(filename) > 255:
+        raise HTTPException(status_code=422, detail="file name is too long (maximum 255 characters)")
+    content = await file.read(get_settings().max_logical_file_bytes + 1)
+    stored = validate_and_store_content(content, filename=filename)
+    document = Document(
+        listing_file_id=listing_file.id,
+        document_name=filename,
+        mime_type=file.content_type or "application/octet-stream",
+        content_hash=stored.content_hash,
+        storage_reference=stored.storage_reference,
+        file_size_bytes=stored.size_bytes,
+        document_type=DocumentType.UNKNOWN,
+        current_stage=ProcessingStage.CLASSIFICATION,
+    )
+    db.add(document)
+    persist_or_422(db)
+    db.commit()
+    return DocumentUploaded(document_id=document.id)
+
+
+def ensure_document_text(db: Session, document: Document) -> None:
+    """Parse the stored file once if the document has no text yet.
+
+    The listing workflow has no separate parse stage, so classification
+    acquires its own input here: without the marker-bearing text a demo
+    document would come back UNKNOWN even though the file is on disk.
+    """
+    if document.extracted_text or not document.storage_reference:
+        return
+    storage = LocalDocumentStorage(get_settings().document_storage_root)
+    try:
+        parsed = DocumentParser().parse(
+            storage.resolve(document.storage_reference),
+            mime_type=document.mime_type,
+            document_name=document.document_name,
+        )
+    except (StorageError, DocumentFormatError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    document.extracted_text = sanitize_persisted_text(parsed.extracted_text)
+
+
+@router.post("/documents/{document_id}/classify", response_model=DocumentClassified, dependencies=[Depends(require_intake_api_key)])
+def classify_listing_document(document_id: int, db: Session = Depends(get_db)) -> DocumentClassified:
+    """Stage 4: classify one stored document.
+
+    Runs the configured provider (mock in dev/demo) and records the type
+    and its confidence.  ``UNKNOWN`` is a valid honest outcome -- it sends
+    the document to review rather than guessing.  The provider is called
+    once and its per-type fields are persisted with the result, so the
+    extract stage reports them instead of classifying a second time.
+    """
+    document = db.get(Document, document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail="document not found")
+    ensure_document_text(db, document)
+    try:
+        result = LLMDocumentClassifier(get_settings()).classify(
+            document_id=document.id,
+            document_name=document.document_name,
+            mime_type=document.mime_type,
+            extracted_text=document.extracted_text or "",
+            extracted_data=document.extracted_data or {},
+        )
+    except LLMError as error:
+        raise HTTPException(status_code=422 if error.needs_review else 502, detail=str(error)) from error
+    ensure_jsonb_value(result.extracted_data, "documents.extracted_data")
+    document.document_type = result.document_type
+    document.classification_confidence = result.confidence
+    document.extracted_data = result.extracted_data
+    persist_or_422(db)
+    db.commit()
+    return DocumentClassified(
+        document_id=document.id,
+        document_type=result.document_type.value,
+        classification_confidence=result.confidence,
+    )
+
+
+@router.post("/documents/{document_id}/extract", response_model=DocumentExtracted, dependencies=[Depends(require_intake_api_key)])
+def extract_listing_document(document_id: int, db: Session = Depends(get_db)) -> DocumentExtracted:
+    """Stage 5: the per-type schema fields for one document.
+
+    Classification already ran the provider and persisted its fields, so
+    this reports them; called before classify (or after a re-upload) it runs
+    the provider itself.  Extraction never sets ``document_type`` -- that is
+    the classify stage's write, so skipping a stage stays visible instead of
+    silently doing two jobs.
+    """
+    document = db.get(Document, document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail="document not found")
+    if not document.extracted_data:
+        ensure_document_text(db, document)
+        try:
+            result = LLMDocumentClassifier(get_settings()).classify(
+                document_id=document.id,
+                document_name=document.document_name,
+                mime_type=document.mime_type,
+                extracted_text=document.extracted_text or "",
+                extracted_data={},
+            )
+        except LLMError as error:
+            raise HTTPException(status_code=422 if error.needs_review else 502, detail=str(error)) from error
+        ensure_jsonb_value(result.extracted_data, "documents.extracted_data")
+        document.extracted_data = result.extracted_data
+        persist_or_422(db)
+        db.commit()
+    return DocumentExtracted(
+        document_id=document.id,
+        document_type=document_type_value(document),
+        extracted_data=document.extracted_data or {},
+    )
+
+
+@router.post("/listing-files/{listing_file_id}/reconcile", response_model=ReconciliationReport, dependencies=[Depends(require_intake_api_key)])
+def reconcile_listing(listing_file_id: int, db: Session = Depends(get_db)) -> ReconciliationReport:
+    """Stage 6: match classified documents to the generated requirements.
+
+    Moves matched requirements PENDING -> RECEIVED and records Evidence.
+    Generation is deliberately *not* called here: a file with no
+    requirements reconciles to an empty result, which the orchestrator sees
+    rather than a hidden generation step.
+    """
+    listing_file = db.get(ListingFile, listing_file_id)
+    if listing_file is None:
+        raise HTTPException(status_code=404, detail="listing file not found")
+    result = reconcile_listing_file(db, listing_file)
+    db.commit()
+    return ReconciliationReport(**asdict(result))
+
+
+@router.post("/listing-files/{listing_file_id}/verdict", response_model=VerdictResponse, dependencies=[Depends(require_intake_api_key)])
+def compute_listing_verdict(listing_file_id: int, db: Session = Depends(get_db)) -> VerdictResponse:
+    """Stage 7: roll requirement states up to the file-level verdict.
+
+    Pure function of current requirement state -- re-running overwrites the
+    previous verdict.  Reconciliation reaches RECEIVED, never VERIFIED, so
+    CONDITIONALLY_READY is the highest verdict until verification exists.
+    """
+    listing_file = db.get(ListingFile, listing_file_id)
+    if listing_file is None:
+        raise HTTPException(status_code=404, detail="listing file not found")
+    result = compute_verdict(db, listing_file)
+    db.commit()
+    return VerdictResponse(
+        verdict=result.verdict.value,
+        reason=result.reason,
+        blocking_pending=result.blocking_pending,
+        blocking_exceptions=result.blocking_exceptions,
+        pending_verification=result.pending_verification,
+        advisory=result.advisory,
+    )
+
+
+@router.get("/listing-files/{listing_file_id}", response_model=ListingFileReadout, dependencies=[Depends(require_intake_api_key)])
+def get_listing_file_readout(listing_file_id: int, db: Session = Depends(get_db)) -> ListingFileReadout:
+    """Stage 8: one read of the whole file -- facts, requirements, verdict.
+
+    ``verdict``/``reason`` are what the verdict stage last stored (null
+    until it runs), and ``unmatched_document_ids`` is the review queue:
+    documents no requirement has evidence for.
+    """
+    listing_file = db.get(ListingFile, listing_file_id)
+    if listing_file is None:
+        raise HTTPException(status_code=404, detail="listing file not found")
+    requirements = (
+        db.query(Requirement)
+        .filter(Requirement.listing_file_id == listing_file.id)
+        .order_by(Requirement.requirement_key)
+        .all()
+    )
+    return ListingFileReadout(
+        id=listing_file.id,
+        property_address=listing_file.property_address,
+        apn=listing_file.apn,
+        seller_name=listing_file.seller_name,
+        property_attributes=listing_file.property_attributes,
+        verdict=listing_file.readiness_verdict,
+        reason=listing_file.readiness_reason,
+        readiness_assessed_at=listing_file.readiness_assessed_at,
+        requirements=[
+            RequirementSummary(
+                requirement_key=requirement.requirement_key,
+                requirement_type=requirement.requirement_type,
+                status=requirement.status,
+                state=requirement.state,
+            )
+            for requirement in requirements
+        ],
+        unmatched_document_ids=unmatched_document_ids(db, listing_file),
+    )

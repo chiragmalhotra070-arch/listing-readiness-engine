@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.domain.enums import BusinessOutcome, DocumentType, FailureType, ProcessingStatus
 
@@ -414,3 +414,96 @@ class SolarAgreementFields(ListingDocumentFields):
     ownership_type: Optional[str] = None  # owned | leased | PPA
     provider_name: Optional[str] = None
     model_config = ConfigDict(extra="forbid")
+
+
+# ---------------------------------------------------------------------------
+# Listing stage endpoints (Slice 7) -- one thin endpoint per workflow stage.
+#
+# n8n orchestrates these; it passes ids and reads responses, never holds
+# workflow state.  Request constraints match the varchar(n) columns, per the
+# input-boundary rule above.
+# ---------------------------------------------------------------------------
+
+
+class ListingFileCreate(BaseModel):
+    """POST /listing-files -- creates the file; generation is a later stage."""
+
+    property_address: Optional[str] = Field(default=None, max_length=500)
+    apn: Optional[str] = Field(default=None, max_length=64)
+    seller_name: Optional[str] = Field(default=None, max_length=255)
+    property_attributes: dict[str, Any]
+
+    @model_validator(mode="after")
+    def require_state_attribute(self) -> "ListingFileCreate":
+        state = self.property_attributes.get("state")
+        if not isinstance(state, str) or not state.strip():
+            raise ValueError("property_attributes.state is required")
+        return self
+
+
+class ListingFileCreated(BaseModel):
+    id: int
+
+
+class RequirementSummary(BaseModel):
+    """One generated requirement as the orchestrator reads it back."""
+
+    requirement_key: str
+    requirement_type: str
+    status: str
+    state: str
+
+
+class RequirementListResponse(BaseModel):
+    requirements: list[RequirementSummary]
+
+
+class DocumentUploaded(BaseModel):
+    document_id: int
+
+
+class DocumentClassified(BaseModel):
+    document_id: int
+    document_type: str
+    classification_confidence: Optional[float]
+
+
+class DocumentExtracted(BaseModel):
+    document_id: int
+    document_type: str
+    extracted_data: dict[str, Any]
+
+
+class ReconciliationReport(BaseModel):
+    """POST /listing-files/{id}/reconcile -- what one matching pass did."""
+
+    evidence_created: int
+    requirements_moved_to_received: list[str]
+    unmet_requirement_keys: list[str]
+    unmatched_document_ids: list[int]
+
+
+class VerdictResponse(BaseModel):
+    """POST /listing-files/{id}/verdict -- the rollup verdict for one file."""
+
+    verdict: str
+    reason: str
+    blocking_pending: list[str]
+    blocking_exceptions: list[str]
+    pending_verification: list[str]
+    advisory: list[str]
+
+
+class ListingFileReadout(BaseModel):
+    """GET /listing-files/{id} -- the whole file state in one read."""
+
+    id: int
+    property_address: Optional[str]
+    apn: Optional[str]
+    seller_name: Optional[str]
+    property_attributes: Optional[dict[str, Any]]
+    verdict: Optional[str]
+    reason: Optional[str]
+    readiness_assessed_at: Optional[datetime]
+    requirements: list[RequirementSummary]
+    unmatched_document_ids: list[int]

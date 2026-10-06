@@ -155,7 +155,7 @@ def test_second_run_is_idempotent(db):
 
 
 def test_unknown_and_unlisted_types_never_match(db):
-    """UNKNOWN is filtered before matching; unmatched means no rule claimed it."""
+    """Neither type creates evidence; both are reported for review."""
     listing_file = _file(db, **CA_1968_HOA_SOLAR)
     _generate(db, listing_file)
     unknown = _doc(db, listing_file, DocumentType.UNKNOWN, confidence=0.31)
@@ -164,12 +164,14 @@ def test_unknown_and_unlisted_types_never_match(db):
     result = reconcile_listing_file(db, listing_file)
 
     assert result.evidence_created == 0
+    assert db.query(Evidence).filter(
+        Evidence.document_id.in_([unknown.id, invoice.id])
+    ).count() == 0
     assert db.query(Evidence).count() == 0
     assert result.requirements_moved_to_received == []
     assert all(state == RequirementState.PENDING.value for state in _states(db, listing_file).values())
     assert len(result.unmet_requirement_keys) == 12
-    assert result.unmatched_document_ids == [invoice.id]
-    assert unknown.id not in result.unmatched_document_ids
+    assert sorted(result.unmatched_document_ids) == sorted([unknown.id, invoice.id])
 
 
 def test_two_documents_same_type_two_evidence_one_transition(db):

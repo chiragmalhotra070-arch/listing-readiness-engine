@@ -15,7 +15,9 @@ V0 boundaries (deliberate):
   never auto-cleared by a new upload.
 - ``UNKNOWN`` documents are excluded before matching: they can never
   satisfy a requirement (they route to review instead, per the Slice 3
-  classifier), so they are not reported as unmatched either.
+  classifier).  They are still reported in ``unmatched_document_ids`` so
+  the caller can route them to review — they simply never create
+  evidence.
 - Idempotency is code-checked: an existing ``(requirement_id,
   document_id)`` pair never gets a second ``Evidence`` row, so a re-run
   creates nothing.  No migration needed for this slice.
@@ -114,13 +116,12 @@ def reconcile_listing_file(session: Session, listing_file: ListingFile) -> Recon
 
     documents = (
         session.query(Document)
-        .filter(
-            Document.listing_file_id == listing_file.id,
-            Document.document_type != UNKNOWN_DOCUMENT_TYPE,
-        )
+        .filter(Document.listing_file_id == listing_file.id)
         .order_by(Document.id)
         .all()
     )
+    # UNKNOWN never matches; it is reported unmatched instead (review routing).
+    matchable = [document for document in documents if document_type_value(document) != UNKNOWN_DOCUMENT_TYPE]
 
     rules = _load_rules(session, requirements)
     pairs, evidence_counts = _existing_evidence(session, requirements)
@@ -136,7 +137,7 @@ def reconcile_listing_file(session: Session, listing_file: ListingFile) -> Recon
         accepted_types = satisfied_document_types(rule)
         if not accepted_types:
             continue
-        for document in documents:
+        for document in matchable:
             document_type = document_type_value(document)
             if document_type not in accepted_types:
                 continue

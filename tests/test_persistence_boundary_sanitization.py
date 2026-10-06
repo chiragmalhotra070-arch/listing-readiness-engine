@@ -86,8 +86,11 @@ EXPECTED_FREE_FORM = {
     "emails.sender_company",
     "emails.sender_name",
     "emails.subject",
+    "listing_files.readiness_reason",
+    "listing_files.seller_name",
     "processing_attempts.failure_message",
     "processing_runs.extracted_text",
+    "requirements.state_reason",
 }
 
 STRUCTURED_SAMPLES = [
@@ -301,7 +304,7 @@ def test_every_string_column_is_classified() -> None:
             (free_form if column.info.get(FREE_FORM_TEXT_INFO) else structured).add(label)
 
     assert free_form == EXPECTED_FREE_FORM
-    assert len(free_form) + len(structured) == 56
+    assert len(free_form) + len(structured) == 75
     for label in STRUCTURED_SAMPLES:
         assert label in structured, f"{label} must be structured (rejected, not rewritten)"
 

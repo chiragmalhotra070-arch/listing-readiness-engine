@@ -41,7 +41,7 @@ class RequestBodySizeLimitMiddleware:
         await self.app(scope, limited_receive, send)
 
 
-app = FastAPI(title="Financial Document Intake & Decision Engine", version="0.1.0")
+app = FastAPI(title="Listing Readiness Engine", version="0.1.0")
 app.include_router(router, prefix="/v1")
 app.add_middleware(RequestBodySizeLimitMiddleware)
 

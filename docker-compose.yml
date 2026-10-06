@@ -2,7 +2,7 @@ services:
   db:
     image: postgres:16
     environment:
-      POSTGRES_DB: financial_engine
+      POSTGRES_DB: listing_engine
       POSTGRES_USER: engine
       POSTGRES_PASSWORD: engine
     ports: ["5432:5432"]

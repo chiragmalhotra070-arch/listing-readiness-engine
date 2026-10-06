@@ -8,7 +8,7 @@ MAX_LOGICAL_FILE_BYTES = 20 * 1024 * 1024
 
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql+psycopg://engine:engine@localhost:5432/financial_engine"
+    database_url: str = "postgresql+psycopg://engine:engine@localhost:5432/listing_engine"
     processing_mode: str = "sync"
     work_queue_lease_seconds: int = 300
     ocr_acceptable_score: float = 0.90
@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     ocr_max_pages: int = 10
     ocr_render_dpi: int = 200
     ocr_max_rendered_image_bytes: int = 10 * 1024 * 1024
-    ocr_temp_root: str = "/tmp/financial-engine-ocr"
+    ocr_temp_root: str = "/tmp/listing-engine-ocr"
     intake_api_key: str = "dev-intake-key"
     max_logical_file_bytes: int = MAX_LOGICAL_FILE_BYTES
     #: Maximum number of documents in a single intake request, on either
@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     #: headroom.  Violations are HTTP 413, matching the existing per-file
     #: size semantics.
     max_request_body_bytes: int = 0
-    document_storage_root: str = "/tmp/financial-engine-documents"
+    document_storage_root: str = "/tmp/listing-engine-documents"
     llm_provider: str = "mock"
     llm_base_url: str = ""
     llm_model: str = "mock-v1"

@@ -8,7 +8,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
-from app.domain.enums import DocumentType, WorkItemStatus
+from app.domain.enums import DocumentType, ReadinessVerdict, RequirementState, WorkItemStatus
 
 # JSON on SQLite (unit tests build the schema with Base.metadata.create_all),
 # JSONB on PostgreSQL (matches the alembic DDL).
@@ -77,7 +77,8 @@ class Document(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    email_id: Mapped[int] = mapped_column(ForeignKey("emails.id"), index=True)
+    email_id: Mapped[Optional[int]] = mapped_column(ForeignKey("emails.id"), index=True)
+    listing_file_id: Mapped[Optional[int]] = mapped_column(ForeignKey("listing_files.id"), index=True)
     customer_id: Mapped[Optional[int]] = mapped_column(ForeignKey("customers.id"), index=True)
     document_name: Mapped[str] = mapped_column(String(255))
     mime_type: Mapped[str] = mapped_column(String(255))
@@ -105,7 +106,8 @@ class Document(Base):
     retryable: Mapped[Optional[bool]] = mapped_column(Boolean)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    email: Mapped[Email] = relationship(back_populates="documents")
+    email: Mapped[Optional[Email]] = relationship(back_populates="documents")
+    listing_file: Mapped[Optional["ListingFile"]] = relationship(back_populates="documents")
 
 
 class BusinessIdentityOwnership(Base):
@@ -246,3 +248,124 @@ class AuditEvent(Base):
     correlation_id: Mapped[Optional[str]] = mapped_column(String(255))
     n8n_execution_id: Mapped[Optional[str]] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ListingFile(Base):
+    """A listing-readiness file: one property, one seller, their documents.
+
+    The file-level aggregate for the listing engine.  Documents bind to it
+    via ``documents.listing_file_id`` (email intake keeps using ``email_id``;
+    upload intake sets ``listing_file_id`` instead, which is why ``email_id``
+    is nullable).
+
+    ``property_attributes`` is the JSONB fact sheet that drives requirement
+    generation (``year_built``, ``property_type``, ``hoa``, ``solar``,
+    ``septic``, ``seller_type``, ...).  The readiness verdict lives here,
+    never on an individual document.
+    """
+
+    __tablename__ = "listing_files"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # Resolved property identity (canonical values; null until resolved).
+    property_address: Mapped[Optional[str]] = mapped_column(String(500))
+    apn: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    # Resolved seller identity (display name; null until resolved).
+    seller_name: Mapped[Optional[str]] = mapped_column(String(255), info=FREE_FORM_TEXT)
+    # Fact sheet for the requirement engine.
+    property_attributes: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, info=JSONB_REJECT_NUL)
+    # Readiness verdict (ReadinessVerdict); null until assessed.
+    readiness_verdict: Mapped[Optional[ReadinessVerdict]] = mapped_column(String(32))
+    readiness_reason: Mapped[Optional[str]] = mapped_column(Text, info=FREE_FORM_TEXT)
+    readiness_assessed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    documents: Mapped[list["Document"]] = relationship(back_populates="listing_file")
+    requirements: Mapped[list["Requirement"]] = relationship(back_populates="listing_file")
+
+
+class RequirementRule(Base):
+    """One versioned entry in the requirement catalog.
+
+    The "Initial California requirement model": configurable, versioned
+    data, not code.  The requirement engine evaluates each rule's
+    ``trigger`` against a listing file's ``property_attributes``; matching
+    rules generate ``Requirement`` rows.  ``(requirement_key, version)`` is
+    unique so catalog revisions coexist.
+    """
+
+    __tablename__ = "requirement_rules"
+    __table_args__ = (
+        UniqueConstraint("requirement_key", "version", name="uq_requirement_rules_key_version"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    requirement_key: Mapped[str] = mapped_column(String(64), index=True)
+    requirement_type: Mapped[str] = mapped_column(String(32))  # RequirementType
+    status: Mapped[str] = mapped_column(String(32))  # RequirementStatus
+    jurisdiction: Mapped[str] = mapped_column(String(16), index=True)
+    satisfied_by: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, info=JSONB_REJECT_NUL)
+    trigger: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, info=JSONB_REJECT_NUL)
+    timing: Mapped[Optional[str]] = mapped_column(String(64))
+    source: Mapped[Optional[str]] = mapped_column(String(255))
+    version: Mapped[str] = mapped_column(String(32))
+    effective_from: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    effective_to: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Requirement(Base):
+    """A generated requirement instance for one listing file.
+
+    Produced by the requirement engine from ``RequirementRule`` rows plus
+    the file's ``property_attributes``.  Lifecycle: PENDING → RECEIVED →
+    VERIFIED, or EXCEPTION.  A conditionally-ready gap plan is expressed
+    with ``owner`` + ``due_date``.
+    """
+
+    __tablename__ = "requirements"
+    __table_args__ = (
+        UniqueConstraint("listing_file_id", "requirement_key", name="uq_requirements_file_key"),
+        CheckConstraint(
+            "state IN ('PENDING', 'RECEIVED', 'VERIFIED', 'EXCEPTION')",
+            name="ck_requirements_state",
+        ),
+        Index("ix_requirements_file_state", "listing_file_id", "state"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    listing_file_id: Mapped[int] = mapped_column(ForeignKey("listing_files.id"), index=True)
+    requirement_rule_id: Mapped[Optional[int]] = mapped_column(ForeignKey("requirement_rules.id"))
+    requirement_key: Mapped[str] = mapped_column(String(64))
+    requirement_type: Mapped[str] = mapped_column(String(32))  # RequirementType
+    status: Mapped[str] = mapped_column(String(32))  # RequirementStatus
+    state: Mapped[str] = mapped_column(String(32), nullable=False, default=RequirementState.PENDING)
+    state_reason: Mapped[Optional[str]] = mapped_column(Text, info=FREE_FORM_TEXT)
+    owner: Mapped[Optional[str]] = mapped_column(String(255))
+    due_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    listing_file: Mapped["ListingFile"] = relationship(back_populates="requirements")
+    evidence: Mapped[list["Evidence"]] = relationship(back_populates="requirement")
+
+
+class Evidence(Base):
+    """Something claimed to satisfy a requirement.
+
+    Usually a document; occasionally an observation or an attestation
+    (e.g. agent-attested showing access).  Confidence-gated: low-confidence
+    evidence routes to human confirmation, never auto-trust.
+    """
+
+    __tablename__ = "evidence"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    requirement_id: Mapped[int] = mapped_column(ForeignKey("requirements.id"), index=True)
+    document_id: Mapped[Optional[int]] = mapped_column(ForeignKey("documents.id"), index=True)
+    source: Mapped[str] = mapped_column(String(16))  # EvidenceSource
+    confidence: Mapped[Optional[float]]
+    verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    detail: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, info=JSONB_REJECT_NUL)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    requirement: Mapped["Requirement"] = relationship(back_populates="evidence")

@@ -94,7 +94,7 @@ class TesseractOCRProvider:
         max_pages: int = 10,
         render_dpi: int = 200,
         max_rendered_image_bytes: int = 10 * 1024 * 1024,
-        temp_root: str = "/tmp/financial-engine-ocr",
+        temp_root: str = "/tmp/listing-engine-ocr",
         runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
         which: Callable[[str], str | None] = shutil.which,
     ) -> None:

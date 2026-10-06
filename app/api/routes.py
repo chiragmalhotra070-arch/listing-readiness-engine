@@ -13,11 +13,12 @@ from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from app.config import get_settings
 from app.db.models import Document, ListingFile, Requirement
-from app.domain.enums import DocumentType, ProcessingStage
+from app.domain.enums import DocumentType, ProcessingStage, RequirementState
 from app.db.session import get_db
-from app.schemas import AuditEventResponse, DocumentInput, DocumentResult, EmailIntakeRequest, EmailIntakeResponse, ListingFileCreate, ListingFileCreated, ListingFileReadout, DocumentClassified, DocumentExtracted, DocumentUploaded, N8nIngestRequest, ProcessingAttemptResponse, ReconciliationReport, RequirementListResponse, VerdictResponse, RequirementSummary
+from app.schemas import AuditEventResponse, DocumentInput, DocumentReclassifyRequest, DocumentReclassified, DocumentResult, EmailIntakeRequest, EmailIntakeResponse, ListingFileCreate, ListingFileCreated, ListingFileReadout, DocumentClassified, DocumentExtracted, DocumentUploaded, N8nIngestRequest, ProcessingAttemptResponse, ReconciliationReport, RequirementActionResponse, RequirementFlagRequest, RequirementListResponse, RequirementVerifyRequest, ReviewQueue, ReviewQueueDocument, ReviewQueueItem, VerdictResponse, RequirementSummary
 from app.adapters.document_parser import DocumentFormatError, DocumentParser
 from app.adapters.llm import LLMError
+from app.services.audit import record_audit
 from app.services.classification import LLMDocumentClassifier
 from app.services.pipeline import DocumentPipeline
 from app.services.readiness import compute_verdict
@@ -531,7 +532,8 @@ def compute_listing_verdict(listing_file_id: int, db: Session = Depends(get_db))
 
     Pure function of current requirement state -- re-running overwrites the
     previous verdict.  Reconciliation reaches RECEIVED, never VERIFIED, so
-    CONDITIONALLY_READY is the highest verdict until verification exists.
+    CONDITIONALLY_READY is the highest verdict until a human verifies via
+    POST /requirements/{id}/verify (Slice 8).
     """
     listing_file = db.get(ListingFile, listing_file_id)
     if listing_file is None:
@@ -585,3 +587,182 @@ def get_listing_file_readout(listing_file_id: int, db: Session = Depends(get_db)
         ],
         unmatched_document_ids=unmatched_document_ids(db, listing_file),
     )
+
+
+#: The only identity a v1 review action carries: the key it authenticated with.
+REVIEW_ACTOR = "intake-api-key"
+
+
+def _queue_item(requirement: Requirement) -> ReviewQueueItem:
+    return ReviewQueueItem(
+        requirement_id=requirement.id,
+        requirement_key=requirement.requirement_key,
+        requirement_type=requirement.requirement_type,
+        status=requirement.status,
+        state=requirement.state,
+        state_reason=requirement.state_reason,
+    )
+
+
+@router.get("/listing-files/{listing_file_id}/review-queue", response_model=ReviewQueue, dependencies=[Depends(require_intake_api_key)])
+def get_review_queue(listing_file_id: int, db: Session = Depends(get_db)) -> ReviewQueue:
+    """The human review queue: what needs a person, in four flat buckets.
+
+    A projection of current state only -- no ranking, no confidence
+    threshold.  ``unknown_documents`` is a classification outcome;
+    ``unmatched_documents`` is the readout's evidence-based projection and
+    therefore contains the unknown ones too.
+    """
+    listing_file = db.get(ListingFile, listing_file_id)
+    if listing_file is None:
+        raise HTTPException(status_code=404, detail="listing file not found")
+    requirements = (
+        db.query(Requirement)
+        .filter(Requirement.listing_file_id == listing_file.id)
+        .order_by(Requirement.requirement_key)
+        .all()
+    )
+    documents = (
+        db.query(Document)
+        .filter(Document.listing_file_id == listing_file.id)
+        .order_by(Document.id)
+        .all()
+    )
+    return ReviewQueue(
+        listing_file_id=listing_file.id,
+        exceptions=[
+            _queue_item(requirement)
+            for requirement in requirements
+            if requirement.state == RequirementState.EXCEPTION.value
+        ],
+        unknown_documents=[
+            ReviewQueueDocument(document_id=document.id, document_name=document.document_name)
+            for document in documents
+            if document_type_value(document) == DocumentType.UNKNOWN.value
+        ],
+        unmatched_documents=unmatched_document_ids(db, listing_file),
+        pending_verification=[
+            _queue_item(requirement)
+            for requirement in requirements
+            if requirement.state == RequirementState.RECEIVED.value
+        ],
+    )
+
+
+def _apply_requirement_action(
+    db: Session,
+    requirement: Requirement,
+    *,
+    new_state: str,
+    state_reason: str,
+    event_type: str,
+    message: str,
+    details: dict,
+) -> RequirementActionResponse:
+    """Move one requirement to a new state, audit it, re-roll the verdict.
+
+    The audit row links to the requirement's first evidence document (when
+    one exists) so it is reachable through ``GET /documents/{id}/audit``;
+    the requirement ids live in ``details`` either way.
+    """
+    previous_state = requirement.state
+    requirement.state = new_state
+    requirement.state_reason = state_reason
+    evidence_documents = sorted(requirement.evidence, key=lambda item: item.id)
+    record_audit(
+        db,
+        document_id=evidence_documents[0].document_id if evidence_documents else None,
+        event_type=event_type,
+        status="SUCCESS",
+        message=message,
+        details={
+            "requirement_id": requirement.id,
+            "requirement_key": requirement.requirement_key,
+            "previous_state": previous_state,
+            "actor": REVIEW_ACTOR,
+            **details,
+        },
+    )
+    verdict = compute_verdict(db, requirement.listing_file)
+    db.commit()
+    return RequirementActionResponse(
+        requirement_id=requirement.id,
+        requirement_key=requirement.requirement_key,
+        state=requirement.state,
+        state_reason=requirement.state_reason,
+        verdict=verdict.verdict.value,
+        reason=verdict.reason,
+    )
+
+
+@router.post("/requirements/{requirement_id}/verify", response_model=RequirementActionResponse, dependencies=[Depends(require_intake_api_key)])
+def verify_requirement(requirement_id: int, payload: RequirementVerifyRequest, db: Session = Depends(get_db)) -> RequirementActionResponse:
+    """Human verification: RECEIVED / PENDING / EXCEPTION -> VERIFIED.
+
+    Then re-rolls the file verdict: clearing an EXCEPTION on a blocking
+    requirement lifts its hard block back toward CONDITIONALLY_READY.
+    """
+    requirement = db.get(Requirement, requirement_id)
+    if requirement is None:
+        raise HTTPException(status_code=404, detail="requirement not found")
+    return _apply_requirement_action(
+        db,
+        requirement,
+        new_state=RequirementState.VERIFIED.value,
+        state_reason=payload.note or "verified by human review",
+        event_type="REQUIREMENT_VERIFIED",
+        message="requirement verified by human review",
+        details={"note": payload.note},
+    )
+
+
+@router.post("/requirements/{requirement_id}/flag", response_model=RequirementActionResponse, dependencies=[Depends(require_intake_api_key)])
+def flag_requirement(requirement_id: int, payload: RequirementFlagRequest, db: Session = Depends(get_db)) -> RequirementActionResponse:
+    """Human flag: any state -> EXCEPTION, reason required.
+
+    On a blocking requirement this makes the verdict NOT_READY; evidence
+    is untouched (no deletion, no reassignment).
+    """
+    requirement = db.get(Requirement, requirement_id)
+    if requirement is None:
+        raise HTTPException(status_code=404, detail="requirement not found")
+    return _apply_requirement_action(
+        db,
+        requirement,
+        new_state=RequirementState.EXCEPTION.value,
+        state_reason=payload.reason,
+        event_type="REQUIREMENT_FLAGGED",
+        message="requirement flagged for review",
+        details={"reason": payload.reason},
+    )
+
+
+@router.post("/documents/{document_id}/reclassify", response_model=DocumentReclassified, dependencies=[Depends(require_intake_api_key)])
+def reclassify_document(document_id: int, payload: DocumentReclassifyRequest, db: Session = Depends(get_db)) -> DocumentReclassified:
+    """Correct an UNKNOWN classification so the next reconcile can match it.
+
+    Only ``UNKNOWN`` documents may be reclassified: an already-classified
+    document's evidence stands, and reassignment would rewrite history the
+    evidence rows describe.  Reconciliation itself is *not* run here.
+    """
+    document = db.get(Document, document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail="document not found")
+    previous_document_type = document_type_value(document)
+    if previous_document_type != DocumentType.UNKNOWN.value:
+        raise HTTPException(status_code=409, detail=f"document already classified as {previous_document_type}")
+    document.document_type = payload.document_type.value
+    record_audit(
+        db,
+        document_id=document.id,
+        event_type="DOCUMENT_RECLASSIFIED",
+        status="SUCCESS",
+        message="document reclassified by human review",
+        details={
+            "previous_document_type": previous_document_type,
+            "document_type": document.document_type,
+            "actor": REVIEW_ACTOR,
+        },
+    )
+    db.commit()
+    return DocumentReclassified(document_id=document.id, document_type=document.document_type)

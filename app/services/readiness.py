@@ -18,9 +18,10 @@ V0 boundaries (deliberate):
 - The verdict is a function of current requirement state only: re-running
   overwrites the previous verdict (no manual override in v1), and owner /
   due_date gap plans are ignored.
-- Nothing in this pipeline sets ``VERIFIED`` yet (reconciliation reaches
-  ``RECEIVED``), so ``CONDITIONALLY_READY`` is the highest verdict a real
-  file can reach until verification is built.  That is correct, not a bug.
+- Nothing in this *pipeline* sets ``VERIFIED`` (reconciliation reaches
+  ``RECEIVED``): ``VERIFIED`` comes from human review via
+  ``POST /requirements/{id}/verify`` (Slice 8).  Until a person verifies,
+  ``CONDITIONALLY_READY`` is the highest verdict a file can reach.
 """
 
 from __future__ import annotations

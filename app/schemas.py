@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.domain.enums import BusinessOutcome, DocumentType, FailureType, ProcessingStatus
 
@@ -507,3 +507,80 @@ class ListingFileReadout(BaseModel):
     readiness_assessed_at: Optional[datetime]
     requirements: list[RequirementSummary]
     unmatched_document_ids: list[int]
+
+
+class ReviewQueueItem(BaseModel):
+    """One requirement in the review queue: ``requirement_id`` is the handle
+    the verify/flag endpoints act on."""
+
+    requirement_id: int
+    requirement_key: str
+    requirement_type: str
+    status: str
+    state: str
+    state_reason: Optional[str] = None
+
+
+class ReviewQueueDocument(BaseModel):
+    """One ``UNKNOWN``-classified document awaiting a human decision."""
+
+    document_id: int
+    document_name: str
+
+
+class ReviewQueue(BaseModel):
+    """GET /listing-files/{id}/review-queue -- everything a human must act on.
+
+    Flat buckets, no ranking and no confidence threshold: every requirement
+    in ``EXCEPTION``, every ``RECEIVED`` requirement (pending verification),
+    every ``UNKNOWN`` document, and -- as in the readout -- every document
+    no requirement has evidence for.
+    """
+
+    listing_file_id: int
+    exceptions: list[ReviewQueueItem]
+    unknown_documents: list[ReviewQueueDocument]
+    unmatched_documents: list[int]
+    pending_verification: list[ReviewQueueItem]
+
+
+class RequirementVerifyRequest(BaseModel):
+    """POST /requirements/{id}/verify -- human confirms the requirement."""
+
+    note: Optional[str] = Field(default=None, max_length=1000)
+
+
+class RequirementFlagRequest(BaseModel):
+    """POST /requirements/{id}/flag -- human raises an exception; reason required."""
+
+    reason: str = Field(min_length=1, max_length=1000)
+
+    @field_validator("reason")
+    @classmethod
+    def reason_must_not_be_blank(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("reason must not be blank")
+        return stripped
+
+
+class RequirementActionResponse(BaseModel):
+    """One human action on one requirement, plus the recomputed file verdict."""
+
+    requirement_id: int
+    requirement_key: str
+    state: str
+    state_reason: Optional[str] = None
+    verdict: str
+    reason: str
+
+
+class DocumentReclassifyRequest(BaseModel):
+    """POST /documents/{id}/reclassify -- correct an ``UNKNOWN`` classification."""
+
+    document_type: DocumentType
+
+
+class DocumentReclassified(BaseModel):
+    document_id: int
+    document_type: str

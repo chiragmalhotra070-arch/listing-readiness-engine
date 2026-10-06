@@ -1,0 +1,383 @@
+{
+  "id": "54mDZXfkhnuJPhlY",
+  "name": "Listing Readiness v1",
+  "active": false,
+  "versionId": "3fd34228-3ebf-4a63-8f52-2fedee91644c",
+  "versionName": "Re-bind intake credentials",
+  "description": "Webhook-driven listing readiness run: creates a file from the webhook's property facts, uploads/classifies/extracts each posted document, reconciles, computes the verdict, and responds with the readout.",
+  "createdAt": "2026-10-06T19:21:49.349Z",
+  "updatedAt": "2026-10-06T19:39:30.841Z",
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "binaryMode": "separate"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "listing-readiness/v1",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "341bd3dd-0168-4122-9618-f75f45c30d5a",
+      "name": "Listing Readiness Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 64],
+      "webhookId": "e7afefb4-2ef1-476f-9842-97ce6968815d"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "api-base-url",
+              "name": "api_base_url",
+              "value": "http://listingreadinessengine-api-1:8010",
+              "type": "string"
+            },
+            {
+              "id": "notification-target",
+              "name": "notification_target",
+              "value": "webhook_response",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "65144e63-6aa8-4039-9c9b-c2eb262d6968",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [288, 192]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "jsonBody": "={{ { property_address: $(\"Listing Readiness Trigger\").item.json.body.property_address, apn: $(\"Listing Readiness Trigger\").item.json.body.apn, seller_name: $(\"Listing Readiness Trigger\").item.json.body.seller_name, property_attributes: $(\"Listing Readiness Trigger\").item.json.body.property_attributes } }}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "={{ $(\"Config\").item.json.api_base_url }}/v1/listing-files"
+      },
+      "id": "92887c8d-89ba-414a-951e-b1a23b1881b0",
+      "name": "Create listing file",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [512, 192],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fastapi-intake-api-key",
+          "name": "FastAPI Intake API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "options": {},
+        "url": "={{ $(\"Config\").item.json.api_base_url }}/v1/listing-files/{{ $(\"Create listing file\").item.json.id }}/generate-requirements"
+      },
+      "id": "3dd6f3d6-0570-4519-be01-2640e7820a21",
+      "name": "Generate requirements",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [736, 192],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fastapi-intake-api-key",
+          "name": "FastAPI Intake API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "document-list",
+              "name": "documents",
+              "value": "={{ $(\"Listing Readiness Trigger\").item.json.body.documents ?? [] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "51083721-2413-4196-8330-b34ebeaca8b4",
+      "name": "Load document list",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [960, 192]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "documents",
+        "options": {}
+      },
+      "id": "9cd05f60-4cda-4c26-8b03-075c16a5ddcc",
+      "name": "Split documents",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [1184, 192]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "options": {},
+        "url": "={{ $(\"Config\").item.json.api_base_url }}/v1/listing-files/{{ $(\"Create listing file\").item.json.id }}/reconcile"
+      },
+      "id": "964ac250-4b5a-94e9-2eb1cb24c14b",
+      "name": "Reconcile documents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1344, 192],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fastapi-intake-api-key",
+          "name": "FastAPI Intake API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "options": {},
+        "url": "={{ $(\"Config\").item.json.api_base_url }}/v1/listing-files/{{ $(\"Create listing file\").item.json.id }}/verdict"
+      },
+      "id": "a93df9e8-f1b8-4fc5-8d10-c5bcaf2c6c27",
+      "name": "Compute verdict",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1568, 192],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fastapi-intake-api-key",
+          "name": "FastAPI Intake API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "GET",
+        "options": {},
+        "url": "={{ $(\"Config\").item.json.api_base_url }}/v1/listing-files/{{ $(\"Create listing file\").item.json.id }}"
+      },
+      "id": "d99cf178-b7a8-4ac1-85eb-a4206fd8fe35",
+      "name": "Read final state",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1792, 192],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fastapi-intake-api-key",
+          "name": "FastAPI Intake API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $(\"Config\").item.json.notification_target === \"webhook_response\" ? { notification: { target: \"webhook_response\" }, readout: $(\"Read final state\").item.json } : { notification: { target: $(\"Config\").item.json.notification_target }, ok: true } }}",
+        "options": {}
+      },
+      "id": "83c13469-cbda-4e1f-a8dd-984cf6fef1b7",
+      "name": "Respond with readout",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1808, 64]
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data_base64",
+        "options": {
+          "fileName": "={{ $json.filename }}",
+          "mimeType": "application/pdf"
+        }
+      },
+      "id": "1d40c961-aa51-4724-8611-bd8a3206d1ac",
+      "name": "Prepare file binary",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [816, 272]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "inputDataFieldName": "data",
+              "name": "file",
+              "parameterType": "formBinaryData"
+            }
+          ]
+        },
+        "contentType": "multipart-form-data",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "url": "={{ $(\"Config\").item.json.api_base_url }}/v1/listing-files/{{ $(\"Create listing file\").item.json.id }}/documents"
+      },
+      "id": "3341d462-d33d-45c2-89c7-f670fb45664e",
+      "name": "Upload document",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1040, 192],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fastapi-intake-api-key",
+          "name": "FastAPI Intake API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "options": {},
+        "url": "={{ $(\"Config\").item.json.api_base_url }}/v1/documents/{{ $json.document_id }}/classify"
+      },
+      "id": "b5759fb4-f9ac-413d-9d83-22dd75a2fb6d",
+      "name": "Classify document",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1264, 192],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fastapi-intake-api-key",
+          "name": "FastAPI Intake API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "options": {},
+        "url": "={{ $(\"Config\").item.json.api_base_url }}/v1/documents/{{ $json.document_id }}/extract"
+      },
+      "id": "3a273f26-0c2a-4f08-9802-37dffd51f832",
+      "name": "Extract document",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1488, 192],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fastapi-intake-api-key",
+          "name": "FastAPI Intake API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "30ce2a9e-7107-4f3d-a0fd-aff4b797037f",
+      "name": "Loop documents",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1712, 272]
+    },
+    {
+      "parameters": {
+        "content": "## Listing Readiness v1\n\nPOST JSON to /webhook/listing-readiness/v1:\n\n    { \"property_address\", \"apn\", \"seller_name\",\n      \"property_attributes\": { \"state\": \"CA\", ... },\n      \"documents\": [ { \"filename\": \"demo-ca-tds.pdf\", \"data_base64\": \"...\" } ] }\n\nConfig holds the client-tweakable variables: api_base_url (engine base URL; in-cluster default) and notification_target (webhook_response returns the full readout; any other value acknowledges only).",
+        "height": 256,
+        "width": 912,
+        "color": 4
+      },
+      "id": "5808f19c-63b5-480d-8e9f-c062342405cc",
+      "name": "Sticky Note 56cb249a",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-48, 208]
+    }
+  ],
+  "connections": {
+    "Listing Readiness Trigger": {
+      "main": [[{ "node": "Config", "type": "main", "index": 0 }]]
+    },
+    "Config": {
+      "main": [[{ "node": "Create listing file", "type": "main", "index": 0 }]]
+    },
+    "Create listing file": {
+      "main": [[{ "node": "Generate requirements", "type": "main", "index": 0 }]]
+    },
+    "Generate requirements": {
+      "main": [[{ "node": "Load document list", "type": "main", "index": 0 }]]
+    },
+    "Load document list": {
+      "main": [[{ "node": "Split documents", "type": "main", "index": 0 }]]
+    },
+    "Split documents": {
+      "main": [[{ "node": "Loop documents", "type": "main", "index": 0 }]]
+    },
+    "Reconcile documents": {
+      "main": [[{ "node": "Compute verdict", "type": "main", "index": 0 }]]
+    },
+    "Compute verdict": {
+      "main": [[{ "node": "Read final state", "type": "main", "index": 0 }]]
+    },
+    "Read final state": {
+      "main": [[{ "node": "Respond with readout", "type": "main", "index": 0 }]]
+    },
+    "Prepare file binary": {
+      "main": [[{ "node": "Upload document", "type": "main", "index": 0 }]]
+    },
+    "Upload document": {
+      "main": [[{ "node": "Classify document", "type": "main", "index": 0 }]]
+    },
+    "Classify document": {
+      "main": [[{ "node": "Extract document", "type": "main", "index": 0 }]]
+    },
+    "Extract document": {
+      "main": [[{ "node": "Loop documents", "type": "main", "index": 0 }]]
+    },
+    "Loop documents": {
+      "main": [
+        [{ "node": "Reconcile documents", "type": "main", "index": 0 }],
+        [{ "node": "Prepare file binary", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "nodeGroups": [
+    {
+      "id": "e3b32c0e-3a34-4804-9889-86f7eb71ed38",
+      "name": "Open the listing file",
+      "nodeNames": ["Config", "Create listing file", "Generate requirements", "Load document list", "Split documents"],
+      "description": "Creates the file from the webhook's property facts, generates its requirements, and lays the submitted documents out as items."
+    },
+    {
+      "id": "64e9dfb4-e122-4600-9055-415f86293c0e",
+      "name": "Process every document",
+      "nodeNames": ["Loop documents", "Prepare file binary", "Upload document", "Classify document", "Extract document"],
+      "description": "Uploads each document to the engine, then classifies it and reads back its typed fields before the next one."
+    },
+    {
+      "id": "bde4021f-f6f9-4d2b-af40-7fac13dcea34",
+      "name": "Assess and report readiness",
+      "nodeNames": ["Reconcile documents", "Compute verdict", "Read final state"],
+      "description": "Matches documents to requirements, rolls the states up to the file verdict, then reads the file's final state."
+    }
+  ],
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  }
+}

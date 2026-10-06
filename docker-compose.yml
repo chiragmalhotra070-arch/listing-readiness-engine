@@ -1,0 +1,78 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: financial_engine
+      POSTGRES_USER: engine
+      POSTGRES_PASSWORD: engine
+    ports: ["5432:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+  api:
+    build: .
+    depends_on: [db]
+    ports: ["127.0.0.1:8010:8010"]
+    volumes: ["documents_data:/var/lib/financial-engine/documents"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://engine:engine@db:5432/financial_engine_v2
+      APP_ENV: development
+      PROCESSING_MODE: async
+      INTAKE_API_KEY: dev-intake-key
+      DOCUMENT_STORAGE_ROOT: /var/lib/financial-engine/documents
+      MAX_LOGICAL_FILE_BYTES: ${MAX_LOGICAL_FILE_BYTES:-20971520}
+      LLM_PROVIDER: mock
+      LLM_BASE_URL: https://api.experientiallabs.ai/v1
+      LLM_MODEL: ${LLM_MODEL:-gpt-6-luna}
+      LLM_API_KEY: ${LLM_API_KEY:-${EXPLABS_API_KEY:-}}
+      MODAL_PROXY_TOKEN: ${MODAL_PROXY_TOKEN:-}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-30}
+      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-2000}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0}
+      LLM_PROMPT_VERSION: ${LLM_PROMPT_VERSION:-v1}
+      LLM_SCHEMA_VERSION: ${LLM_SCHEMA_VERSION:-v1}
+      LLM_RESPONSE_FORMAT: ${LLM_RESPONSE_FORMAT:-json_object}
+      LLM_INCLUDE_TEMPERATURE: ${LLM_INCLUDE_TEMPERATURE:-false}
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8010"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - default
+      - n8n-network
+      - financial-engine-net
+  worker:
+    build: .
+    depends_on: [db]
+    volumes: ["documents_data:/var/lib/financial-engine/documents"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://engine:engine@db:5432/financial_engine_v2
+      APP_ENV: development
+      PROCESSING_MODE: async
+      INTAKE_API_KEY: dev-intake-key
+      DOCUMENT_STORAGE_ROOT: /var/lib/financial-engine/documents
+      MAX_LOGICAL_FILE_BYTES: ${MAX_LOGICAL_FILE_BYTES:-20971520}
+      LLM_PROVIDER: mock
+      LLM_BASE_URL: https://api.experientiallabs.ai/v1
+      LLM_MODEL: ${LLM_MODEL:-gpt-6-luna}
+      LLM_API_KEY: ${LLM_API_KEY:-${EXPLABS_API_KEY:-}}
+      MODAL_PROXY_TOKEN: ${MODAL_PROXY_TOKEN:-}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-30}
+      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-2000}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0}
+      LLM_PROMPT_VERSION: ${LLM_PROMPT_VERSION:-v1}
+      LLM_SCHEMA_VERSION: ${LLM_SCHEMA_VERSION:-v1}
+      LLM_RESPONSE_FORMAT: ${LLM_RESPONSE_FORMAT:-json_object}
+      LLM_INCLUDE_TEMPERATURE: ${LLM_INCLUDE_TEMPERATURE:-false}
+    command: ["python", "-m", "app.worker"]
+    restart: unless-stopped
+volumes:
+  postgres_data:
+  documents_data:
+networks:
+  n8n-network:
+    external: true
+    name: n8n-network
+  financial-engine-net:
+    external: true
+    name: financial-engine-net

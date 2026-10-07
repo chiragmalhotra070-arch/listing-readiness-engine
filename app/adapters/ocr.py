@@ -6,9 +6,12 @@ import subprocess
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Protocol
+from typing import Any, Callable, Protocol, TYPE_CHECKING
 
 from app.services.storage import LocalDocumentStorage, StorageError
+
+if TYPE_CHECKING:
+    from app.config import Settings
 
 
 @dataclass(frozen=True)
@@ -265,3 +268,27 @@ class OCRExtractionAdapter:
         if results:
             return results[-1][1], errors, results
         return None, errors, results
+
+
+def build_ocr_extractor(settings: "Settings") -> OCRExtractionAdapter:
+    """Configure the OCR facade from settings -- the one construction site.
+
+    The chassis pipeline and the listing sync endpoints share this so a
+    text-insufficient PDF takes the same ``extract_with_failover`` path
+    (pypdf -> Tesseract) wherever it is parsed.
+    """
+    return OCRExtractionAdapter(
+        [name.strip() for name in settings.ocr_provider_order.split(",") if name.strip()],
+        mock_provider_order=[name.strip() for name in settings.ocr_mock_provider_order.split(",") if name.strip()],
+        storage=LocalDocumentStorage(settings.document_storage_root),
+        tesseract_options={
+            "tesseract_command": settings.ocr_tesseract_command,
+            "pdftoppm_command": settings.ocr_pdftoppm_command,
+            "language": settings.ocr_language,
+            "timeout_seconds": settings.ocr_timeout_seconds,
+            "max_pages": settings.ocr_max_pages,
+            "render_dpi": settings.ocr_render_dpi,
+            "max_rendered_image_bytes": settings.ocr_max_rendered_image_bytes,
+            "temp_root": settings.ocr_temp_root,
+        },
+    )

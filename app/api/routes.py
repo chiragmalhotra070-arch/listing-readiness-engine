@@ -16,8 +16,9 @@ from app.db.models import Document, ListingFile, Requirement
 from app.domain.enums import DocumentType, ProcessingStage, RequirementState
 from app.db.session import get_db
 from app.schemas import AuditEventResponse, ConflictFinding, DetectExceptionsReport, DocumentInput, DocumentReclassifyRequest, DocumentReclassified, DocumentResult, EmailIntakeRequest, EmailIntakeResponse, ListingFileCreate, ListingFileCreated, ListingFileReadout, DocumentClassified, DocumentExtracted, DocumentUploaded, MissingSignatureFinding, N8nIngestRequest, OverdueRequirementFinding, ProcessingAttemptResponse, ReconciliationReport, ReadoutRequirement, RequirementActionResponse, RequirementFlagRequest, RequirementListResponse, RequirementVerifyRequest, ReviewQueue, ReviewQueueDocument, ReviewQueueItem, ReviewQueueUnmatched, VerdictResponse, RequirementSummary
-from app.adapters.document_parser import DocumentFormatError, DocumentParser
+from app.adapters.document_parser import DocumentFormatError, DocumentParser, FormatExtractionResult
 from app.adapters.llm import LLMError
+from app.adapters.ocr import OCRExtractionAdapter, build_ocr_extractor
 from app.services.audit import REVIEW_ACTOR, record_audit
 from app.services.classification import LLMDocumentClassifier
 from app.services.exception_detection import detect_exceptions, is_overdue
@@ -418,12 +419,17 @@ async def upload_listing_document(listing_file_id: int, file: UploadFile = File(
     return DocumentUploaded(document_id=document.id)
 
 
-def ensure_document_text(db: Session, document: Document) -> None:
+def ensure_document_text(db: Session, document: Document, *, extractor: OCRExtractionAdapter | None = None) -> None:
     """Parse the stored file once if the document has no text yet.
 
     The listing workflow has no separate parse stage, so classification
     acquires its own input here: without the marker-bearing text a demo
     document would come back UNKNOWN even though the file is on disk.
+
+    A PDF whose pypdf text is insufficient (scanned / image-only) is
+    routed through the chassis OCR failover (``extract_with_failover`` ->
+    Tesseract) before the LLM stage; the winning provider is recorded in
+    the document's evidence and audit trail.
     """
     if document.extracted_text or not document.storage_reference:
         return
@@ -436,7 +442,67 @@ def ensure_document_text(db: Session, document: Document) -> None:
         )
     except (StorageError, DocumentFormatError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
-    document.extracted_text = sanitize_persisted_text(parsed.extracted_text)
+    text = parsed.extracted_text
+    if parsed.provider == "pypdf" and not parsed.metadata.get("text_sufficient"):
+        text = _ocr_fallback(db, document, parsed, extractor=extractor) or text
+    document.extracted_text = sanitize_persisted_text(text)
+
+
+def _ocr_fallback(db: Session, document: Document, parsed: FormatExtractionResult, *, extractor: OCRExtractionAdapter | None = None) -> str:
+    """Run the OCR failover for a text-insufficient PDF and record it.
+
+    Mirrors the chassis pipeline's evidence shape (``format_extraction``
+    plus ``extraction``) so ``GET /documents/{id}`` and the audit trail
+    show which provider produced the text.  Returns the OCR text, or ""
+    when every provider failed -- the caller keeps the pypdf text then.
+    """
+    ocr = extractor or build_ocr_extractor(get_settings())
+    extraction, provider_errors, _provider_results = ocr.extract_with_failover(
+        document_name=document.document_name,
+        storage_reference=document.storage_reference,
+        mime_type=document.mime_type,
+        page_count=parsed.metadata.get("page_count"),
+    )
+    merged_evidence: dict = {
+        **(document.evidence or {}),
+        "format_extraction": {
+            "provider": parsed.provider,
+            "metadata": parsed.metadata,
+            "warnings": parsed.warnings,
+            "ocr_needed": True,
+        },
+    }
+    if provider_errors:
+        merged_evidence["format_extraction"]["provider_errors"] = [
+            {"provider": name, "failure_code": error.code} for name, error in provider_errors
+        ]
+    text = ""
+    if extraction is not None and extraction.text:
+        text = extraction.text
+        merged_evidence["extraction"] = {
+            "fallback_used": extraction.fallback_used,
+            "quality_score": extraction.score,
+            "provider": extraction.provider,
+            "warnings": extraction.warnings,
+            "pages_processed": extraction.pages_processed,
+            "provider_metadata": extraction.provider_metadata,
+        }
+        record_audit(
+            db,
+            document_id=document.id,
+            event_type="STAGE_SUCCEEDED",
+            status="SUCCESS",
+            message="OCR fallback completed",
+            details={
+                "stage": ProcessingStage.OCR,
+                "provider": extraction.provider,
+                "quality_score": extraction.score,
+                "pages_processed": extraction.pages_processed,
+            },
+        )
+    ensure_jsonb_value(merged_evidence, "documents.evidence")
+    document.evidence = merged_evidence
+    return text
 
 
 @router.post("/documents/{document_id}/classify", response_model=DocumentClassified, dependencies=[Depends(require_intake_api_key)])

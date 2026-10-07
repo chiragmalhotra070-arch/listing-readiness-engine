@@ -2,11 +2,11 @@
   "id": "54mDZXfkhnuJPhlY",
   "name": "Listing Readiness v1",
   "active": false,
-  "versionId": "d416d4e4-e94a-44b2-8def-d3c50ea7659e",
-  "versionName": "Add detect-exceptions stage (slice 9)",
+  "versionId": "a730ea93-0799-49f6-9cf3-d7df0b6e65de",
+  "versionName": "Point api_base_url at listing-api container",
   "description": "Webhook-driven listing readiness run: creates a listing file from posted property facts, uploads/classifies/extracts each posted document, reconciles, computes the verdict, and responds with the readout.",
   "createdAt": "2026-10-06T19:21:49.349Z",
-  "updatedAt": "2026-10-06T21:32:42.770Z",
+  "updatedAt": "2026-10-07T07:12:58.819Z",
   "settings": {
     "executionOrder": "v1",
     "availableInMCP": true,
@@ -34,7 +34,7 @@
             {
               "id": "api-base-url",
               "name": "api_base_url",
-              "value": "http://listingreadinessengine-api-1:8010",
+              "value": "http://listingreadinessengine-listing-api-1:8010",
               "type": "string"
             },
             {

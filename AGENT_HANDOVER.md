@@ -25,7 +25,7 @@ Portfolio project #1 for an AI automation engineering practice niched specifical
 - **GitHub:** `https://github.com/chiragmalhotra070-arch/listing-readiness-engine` (private)
 - **Last known HEAD:** `a9c6bd8` — verify with `git log`; uncommitted work (slices 2–4, demo docs, compose changes) has piled up since.
 - **Stack:** Python 3.11, FastAPI, SQLAlchemy 2, PostgreSQL 16, Alembic. Tests: `pytest`, SQLite-backed except 23 Postgres-only skips.
-- **Docker:** one compose package (`db` + `api` + `worker`) in the repo root. Listing ports: API **host 8011 → container 8010**; Postgres **host 5454 → container 5432**. The financial-engine stack (8010/5432) and `schema-audit-pg` (5433) are separate projects — **never touch them**.
+- **Docker:** one compose package (`db` + `listing-api` + `worker`) in the repo root — the api service is named `listing-api` so its network alias never collides with the financial stack's `api`. Listing ports: API **host 8011 → container 8010**; Postgres **host 5454 → container 5432**. The financial-engine stack (8010/5432) and `schema-audit-pg` (5433) are separate projects — **never touch them**.
 - **Compose env:** `LLM_PROMPT_VERSION=v2` (must stay v2; v1 is the old financial prompt).
 - **Alembic:** single head `0014_listing_readiness_domain`; 16 tables; `listing_engine` database.
 - **Mac Docker note:** if the `docker` CLI hangs, the default socket is wedged — re-run with `DOCKER_HOST=$HOME/Library/Containers/com.docker.docker/Data/docker.raw.sock` (same daemon, no restart). Never restart Docker Desktop while production n8n containers are running.

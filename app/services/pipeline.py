@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.adapters.crm import CRMActionAdapter
 from app.adapters.customer import CustomerLookupAdapter
-from app.adapters.ocr import ExtractionResult, OCRExtractionAdapter
+from app.adapters.ocr import ExtractionResult, OCRExtractionAdapter, build_ocr_extractor
 from app.adapters.llm import LLMError
 from app.adapters.document_parser import DocumentFormatError, DocumentParser, extract_business_fields
 from app.config import Settings
@@ -53,21 +53,7 @@ class DocumentPipeline:
     def __init__(self, settings: Settings, *, extractor: OCRExtractionAdapter | None = None, classifier: DocumentClassifier | None = None, customer_lookup: CustomerLookupAdapter | None = None, crm: CRMActionAdapter | None = None) -> None:
         self.settings = settings
         self.retry_policy = RetryPolicy(settings)
-        self.extractor = extractor or OCRExtractionAdapter(
-            [name.strip() for name in settings.ocr_provider_order.split(",") if name.strip()],
-            mock_provider_order=[name.strip() for name in settings.ocr_mock_provider_order.split(",") if name.strip()],
-            storage=LocalDocumentStorage(settings.document_storage_root),
-            tesseract_options={
-                "tesseract_command": settings.ocr_tesseract_command,
-                "pdftoppm_command": settings.ocr_pdftoppm_command,
-                "language": settings.ocr_language,
-                "timeout_seconds": settings.ocr_timeout_seconds,
-                "max_pages": settings.ocr_max_pages,
-                "render_dpi": settings.ocr_render_dpi,
-                "max_rendered_image_bytes": settings.ocr_max_rendered_image_bytes,
-                "temp_root": settings.ocr_temp_root,
-            },
-        )
+        self.extractor = extractor or build_ocr_extractor(settings)
         self.classifier = classifier or LLMDocumentClassifier(settings)
         self.customer_lookup = customer_lookup or CustomerLookupAdapter()
         self.crm = crm or CRMActionAdapter()

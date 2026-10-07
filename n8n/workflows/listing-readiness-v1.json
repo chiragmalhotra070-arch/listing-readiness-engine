@@ -2,11 +2,11 @@
   "id": "54mDZXfkhnuJPhlY",
   "name": "Listing Readiness v1",
   "active": false,
-  "versionId": "3fd34228-3ebf-4a63-8f52-2fedee91644c",
-  "versionName": "Re-bind intake credentials",
-  "description": "Webhook-driven listing readiness run: creates a file from the webhook's property facts, uploads/classifies/extracts each posted document, reconciles, computes the verdict, and responds with the readout.",
+  "versionId": "d416d4e4-e94a-44b2-8def-d3c50ea7659e",
+  "versionName": "Add detect-exceptions stage (slice 9)",
+  "description": "Webhook-driven listing readiness run: creates a listing file from posted property facts, uploads/classifies/extracts each posted document, reconciles, computes the verdict, and responds with the readout.",
   "createdAt": "2026-10-06T19:21:49.349Z",
-  "updatedAt": "2026-10-06T19:39:30.841Z",
+  "updatedAt": "2026-10-06T21:32:42.770Z",
   "settings": {
     "executionOrder": "v1",
     "availableInMCP": true,
@@ -140,6 +140,26 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [1344, 192],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fastapi-intake-api-key",
+          "name": "FastAPI Intake API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "options": {},
+        "url": "={{ $(\"Config\").item.json.api_base_url }}/v1/listing-files/{{ $(\"Create listing file\").item.json.id }}/detect-exceptions"
+      },
+      "id": "5f2b8a41-9c3d-4e7a-b1f6-2d8e4c7a9031",
+      "name": "Detect exceptions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1456, 192],
       "credentials": {
         "httpHeaderAuth": {
           "id": "fastapi-intake-api-key",
@@ -329,6 +349,9 @@
       "main": [[{ "node": "Loop documents", "type": "main", "index": 0 }]]
     },
     "Reconcile documents": {
+      "main": [[{ "node": "Detect exceptions", "type": "main", "index": 0 }]]
+    },
+    "Detect exceptions": {
       "main": [[{ "node": "Compute verdict", "type": "main", "index": 0 }]]
     },
     "Compute verdict": {
@@ -372,7 +395,7 @@
     {
       "id": "bde4021f-f6f9-4d2b-af40-7fac13dcea34",
       "name": "Assess and report readiness",
-      "nodeNames": ["Reconcile documents", "Compute verdict", "Read final state"],
+      "nodeNames": ["Reconcile documents", "Detect exceptions", "Compute verdict", "Read final state"],
       "description": "Matches documents to requirements, rolls the states up to the file verdict, then reads the file's final state."
     }
   ],

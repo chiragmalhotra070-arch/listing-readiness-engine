@@ -245,6 +245,36 @@ _DEMO_FIXTURE_PROFILES: dict[str, dict[str, Any]] = {
         "customer_names": ["Jane Seller"],
         "confidence": 0.94,
     },
+    # Slice 9 consistency fixtures: the demo's fictional facts perturbed on
+    # exactly one dimension (APN, seller name, or the signature flag).
+    "wrong-apn-ca-tds.pdf": {
+        "document_type": DocumentType.CA_TDS,
+        "fields": {"property_address": "123 Main St, Pasadena, CA 91101", "apn": "1111-222-333", "seller_name": "Jane Seller", "document_date": None, "listing_agent_name": None, "brokerage_name": None, "signatures_present": True, "disclosure_signed": True, "disclosure_date": "2026-09-16"},
+        "customer_ids": ["CUST-001"],
+        "customer_names": ["Jane Seller"],
+        "confidence": 0.95,
+    },
+    "no-dash-apn-ca-tds.pdf": {
+        "document_type": DocumentType.CA_TDS,
+        "fields": {"property_address": "123 Main St, Pasadena, CA 91101", "apn": "5842018024", "seller_name": "Jane Seller", "document_date": None, "listing_agent_name": None, "brokerage_name": None, "signatures_present": True, "disclosure_signed": True, "disclosure_date": "2026-09-16"},
+        "customer_ids": ["CUST-001"],
+        "customer_names": ["Jane Seller"],
+        "confidence": 0.95,
+    },
+    "conflict-seller-ca-spq.pdf": {
+        "document_type": DocumentType.CA_SPQ,
+        "fields": {"property_address": "123 Main St, Pasadena, CA 91101", "apn": "5842-018-024", "seller_name": "John Doe", "document_date": None, "listing_agent_name": None, "brokerage_name": None, "signatures_present": True, "questionnaire_complete": True, "completion_date": "2026-09-16"},
+        "customer_ids": ["CUST-001"],
+        "customer_names": ["John Doe"],
+        "confidence": 0.95,
+    },
+    "unsigned-listing-agreement.pdf": {
+        "document_type": DocumentType.LISTING_AGREEMENT,
+        "fields": {"property_address": "123 Main St, Pasadena, CA 91101", "apn": "5842-018-024", "seller_name": "Jane Seller", "document_date": "2026-09-15", "listing_agent_name": "Alex Agent", "brokerage_name": "Demo Realty", "signatures_present": False, "listing_price": 1250000.0, "listing_start_date": "2026-09-15", "listing_end_date": "2027-03-15"},
+        "customer_ids": ["CUST-001"],
+        "customer_names": ["Jane Seller"],
+        "confidence": 0.96,
+    },
 }
 
 

@@ -23,6 +23,7 @@ from app.services.classification import DocumentClassifier, LLMDocumentClassifie
 from app.services.decision_engine import DecisionInput, decide
 from app.services.document_lifecycle import advance_stage, begin_stage, complete, fail_permanently, route_to_review, schedule_retry
 from app.services.duplicate_detection import duplicate_key
+from app.services.normalization import ensure_extracted_fields
 from app.services.retry import RetryPolicy, classify_error
 from app.services.validation import validate_required_fields
 from app.services.storage import LocalDocumentStorage, StorageError
@@ -396,10 +397,11 @@ class DocumentPipeline:
             return
         extraction_evidence = {"fallback_used": extraction.fallback_used, "quality_score": extraction.score, "provider": extraction.provider, "warnings": extraction.warnings, "pages_processed": extraction.pages_processed, "provider_metadata": extraction.provider_metadata}
         merged_evidence = {**(document.evidence or {}), "extraction": extraction_evidence}
-        ensure_jsonb_value(extraction.extracted_data, "documents.extracted_data")
+        normalized = ensure_extracted_fields(extraction.extracted_data)
         ensure_jsonb_value(merged_evidence, "documents.evidence")
         document.extracted_text = sanitize_persisted_text(extraction.text)
         document.extracted_data = extraction.extracted_data
+        document.normalized_data = normalized
         document.evidence = merged_evidence
         document.current_stage = ProcessingStage.CLASSIFICATION
         document.stage_status = StageStatus.SUCCESS
@@ -419,12 +421,14 @@ class DocumentPipeline:
         document_fields = {key: value for key, value in (document.extracted_data or {}).items() if key not in {"customer_id", "sender_customer_id"}}
         merged_extracted_data = {**document_fields, **classification.extracted_data}
         classification_result = {"provider": classification.provider, "model": classification.model, "prompt_version": classification.prompt_version, "schema_version": classification.schema_version, "provider_request_id": classification.provider_request_id, "model_confidence": classification.confidence, "normalized_confidence": classification.normalized_confidence, "evidence": classification.evidence, "assessment": classification.assessment, "ambiguities": classification.ambiguities, "warnings": classification.warnings, "raw_metadata": classification.raw_metadata, "extracted_fields": classification.extracted_data, "supplemental_information": classification.supplemental_information, "customer_candidates": classification.customer_candidates.model_dump()}
-        # Validate both JSONB writes - and the merged result - before mutating
-        # either, so a rejection leaves the document exactly as it was.
+        # Validate every JSONB write - extracted and normalized via the
+        # shared helper first - before mutating the document, so a
+        # rejection leaves it exactly as it was.
         merged_evidence = {**(document.evidence or {}), "classification": classification_result}
-        ensure_jsonb_value(merged_extracted_data, "documents.extracted_data")
+        normalized = ensure_extracted_fields(merged_extracted_data)
         ensure_jsonb_value(merged_evidence, "documents.evidence")
         document.extracted_data = merged_extracted_data
+        document.normalized_data = normalized
         document.document_type = classification.document_type
         document.classification_confidence = classification.confidence
         document.evidence = merged_evidence

@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     ocr_max_rendered_image_bytes: int = 10 * 1024 * 1024
     ocr_temp_root: str = "/tmp/listing-engine-ocr"
     intake_api_key: str = "dev-intake-key"
+    #: Days a requirement may sit PENDING (since file creation) before the
+    #: detection stage reports it overdue.  Overdue is surfaced only --
+    #: findings, readout, review queue -- never a state or verdict change.
+    requirement_overdue_days: int = 7
     max_logical_file_bytes: int = MAX_LOGICAL_FILE_BYTES
     #: Maximum number of documents in a single intake request, on either
     #: transport.  Each document becomes a stored file plus Email/Document/

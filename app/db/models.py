@@ -89,6 +89,12 @@ class Document(Base):
     document_type: Mapped[DocumentType] = mapped_column(String(64), default=DocumentType.UNKNOWN)
     extracted_text: Mapped[Optional[str]] = mapped_column(Text, info=FREE_FORM_TEXT)
     extracted_data: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, info=JSONB_REJECT_NUL)
+    #: Stage 1 canonical view of the shared fact fields (property_address,
+    #: apn, seller_name, ...); written with ``extracted_data`` at every
+    #: persist site (see ``normalization.ensure_extracted_fields``).  Null on
+    #: rows created before Slice 9 -- readers fall back to normalizing
+    #: ``extracted_data`` on the fly.
+    normalized_data: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, info=JSONB_REJECT_NUL)
     ocr_score: Mapped[Optional[float]]
     classification_confidence: Mapped[Optional[float]]
     evidence: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, info=JSONB_REJECT_NUL)

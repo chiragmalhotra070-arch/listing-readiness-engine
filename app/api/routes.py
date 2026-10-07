@@ -15,12 +15,15 @@ from app.config import get_settings
 from app.db.models import Document, ListingFile, Requirement
 from app.domain.enums import DocumentType, ProcessingStage, RequirementState
 from app.db.session import get_db
-from app.schemas import AuditEventResponse, DocumentInput, DocumentReclassifyRequest, DocumentReclassified, DocumentResult, EmailIntakeRequest, EmailIntakeResponse, ListingFileCreate, ListingFileCreated, ListingFileReadout, DocumentClassified, DocumentExtracted, DocumentUploaded, N8nIngestRequest, ProcessingAttemptResponse, ReconciliationReport, RequirementActionResponse, RequirementFlagRequest, RequirementListResponse, RequirementVerifyRequest, ReviewQueue, ReviewQueueDocument, ReviewQueueItem, VerdictResponse, RequirementSummary
+from app.schemas import AuditEventResponse, ConflictFinding, DetectExceptionsReport, DocumentInput, DocumentReclassifyRequest, DocumentReclassified, DocumentResult, EmailIntakeRequest, EmailIntakeResponse, ListingFileCreate, ListingFileCreated, ListingFileReadout, DocumentClassified, DocumentExtracted, DocumentUploaded, MissingSignatureFinding, N8nIngestRequest, OverdueRequirementFinding, ProcessingAttemptResponse, ReconciliationReport, ReadoutRequirement, RequirementActionResponse, RequirementFlagRequest, RequirementListResponse, RequirementVerifyRequest, ReviewQueue, ReviewQueueDocument, ReviewQueueItem, ReviewQueueUnmatched, VerdictResponse, RequirementSummary
 from app.adapters.document_parser import DocumentFormatError, DocumentParser
 from app.adapters.llm import LLMError
-from app.services.audit import record_audit
+from app.services.audit import REVIEW_ACTOR, record_audit
 from app.services.classification import LLMDocumentClassifier
+from app.services.exception_detection import detect_exceptions, is_overdue
+from app.services.normalization import document_normalized_fields, ensure_extracted_fields
 from app.services.pipeline import DocumentPipeline
+from app.services.property_resolution import unmatched_reason
 from app.services.readiness import compute_verdict
 from app.services.reconciliation import document_type_value, reconcile_listing_file, unmatched_document_ids
 from app.services.requirement_catalog import ensure_ca_catalog
@@ -460,10 +463,11 @@ def classify_listing_document(document_id: int, db: Session = Depends(get_db)) -
         )
     except LLMError as error:
         raise HTTPException(status_code=422 if error.needs_review else 502, detail=str(error)) from error
-    ensure_jsonb_value(result.extracted_data, "documents.extracted_data")
+    normalized = ensure_extracted_fields(result.extracted_data)
     document.document_type = result.document_type
     document.classification_confidence = result.confidence
     document.extracted_data = result.extracted_data
+    document.normalized_data = normalized
     persist_or_422(db)
     db.commit()
     return DocumentClassified(
@@ -498,14 +502,16 @@ def extract_listing_document(document_id: int, db: Session = Depends(get_db)) ->
             )
         except LLMError as error:
             raise HTTPException(status_code=422 if error.needs_review else 502, detail=str(error)) from error
-        ensure_jsonb_value(result.extracted_data, "documents.extracted_data")
+        normalized = ensure_extracted_fields(result.extracted_data)
         document.extracted_data = result.extracted_data
+        document.normalized_data = normalized
         persist_or_422(db)
         db.commit()
     return DocumentExtracted(
         document_id=document.id,
         document_type=document_type_value(document),
         extracted_data=document.extracted_data or {},
+        normalized_data=document_normalized_fields(document),
     )
 
 
@@ -524,6 +530,35 @@ def reconcile_listing(listing_file_id: int, db: Session = Depends(get_db)) -> Re
     result = reconcile_listing_file(db, listing_file)
     db.commit()
     return ReconciliationReport(**asdict(result))
+
+
+@router.post("/listing-files/{listing_file_id}/detect-exceptions", response_model=DetectExceptionsReport, dependencies=[Depends(require_intake_api_key)])
+def detect_listing_exceptions(listing_file_id: int, db: Session = Depends(get_db)) -> DetectExceptionsReport:
+    """Consistency pass: evaluate rules R1-R3 over the file's current state.
+
+    R1 (cross-document field conflict) and R2 (missing signatures) raise
+    ``EXCEPTION`` states with audit events; R3 (overdue) only reports.
+    The verdict is deliberately not recomputed here -- run the verdict
+    stage after this one to roll the new states up.
+    """
+    listing_file = db.get(ListingFile, listing_file_id)
+    if listing_file is None:
+        raise HTTPException(status_code=404, detail="listing file not found")
+    report = detect_exceptions(
+        db,
+        listing_file,
+        overdue_days=get_settings().requirement_overdue_days,
+    )
+    db.commit()
+    return DetectExceptionsReport(
+        listing_file_id=listing_file.id,
+        conflicts=[ConflictFinding(**asdict(conflict)) for conflict in report.conflicts],
+        missing_signatures=[
+            MissingSignatureFinding(**asdict(finding)) for finding in report.missing_signatures
+        ],
+        overdue=[OverdueRequirementFinding(**asdict(entry)) for entry in report.overdue],
+        exceptions_raised=report.exceptions_raised,
+    )
 
 
 @router.post("/listing-files/{listing_file_id}/verdict", response_model=VerdictResponse, dependencies=[Depends(require_intake_api_key)])
@@ -567,6 +602,7 @@ def get_listing_file_readout(listing_file_id: int, db: Session = Depends(get_db)
         .order_by(Requirement.requirement_key)
         .all()
     )
+    overdue_days = get_settings().requirement_overdue_days
     return ListingFileReadout(
         id=listing_file.id,
         property_address=listing_file.property_address,
@@ -577,20 +613,17 @@ def get_listing_file_readout(listing_file_id: int, db: Session = Depends(get_db)
         reason=listing_file.readiness_reason,
         readiness_assessed_at=listing_file.readiness_assessed_at,
         requirements=[
-            RequirementSummary(
+            ReadoutRequirement(
                 requirement_key=requirement.requirement_key,
                 requirement_type=requirement.requirement_type,
                 status=requirement.status,
                 state=requirement.state,
+                overdue=is_overdue(listing_file, requirement, threshold_days=overdue_days),
             )
             for requirement in requirements
         ],
         unmatched_document_ids=unmatched_document_ids(db, listing_file),
     )
-
-
-#: The only identity a v1 review action carries: the key it authenticated with.
-REVIEW_ACTOR = "intake-api-key"
 
 
 def _queue_item(requirement: Requirement) -> ReviewQueueItem:
@@ -606,16 +639,19 @@ def _queue_item(requirement: Requirement) -> ReviewQueueItem:
 
 @router.get("/listing-files/{listing_file_id}/review-queue", response_model=ReviewQueue, dependencies=[Depends(require_intake_api_key)])
 def get_review_queue(listing_file_id: int, db: Session = Depends(get_db)) -> ReviewQueue:
-    """The human review queue: what needs a person, in four flat buckets.
+    """The human review queue: what needs a person, in five flat buckets.
 
     A projection of current state only -- no ranking, no confidence
     threshold.  ``unknown_documents`` is a classification outcome;
-    ``unmatched_documents`` is the readout's evidence-based projection and
-    therefore contains the unknown ones too.
+    ``unmatched_documents`` carries the readout's evidence-based projection
+    (unknown ones included) with each document's unmatched reason;
+    ``overdue`` surfaces PENDING requirements past the configured threshold
+    without changing their state.
     """
     listing_file = db.get(ListingFile, listing_file_id)
     if listing_file is None:
         raise HTTPException(status_code=404, detail="listing file not found")
+    overdue_days = get_settings().requirement_overdue_days
     requirements = (
         db.query(Requirement)
         .filter(Requirement.listing_file_id == listing_file.id)
@@ -628,6 +664,7 @@ def get_review_queue(listing_file_id: int, db: Session = Depends(get_db)) -> Rev
         .order_by(Document.id)
         .all()
     )
+    unmatched_ids = set(unmatched_document_ids(db, listing_file))
     return ReviewQueue(
         listing_file_id=listing_file.id,
         exceptions=[
@@ -640,11 +677,24 @@ def get_review_queue(listing_file_id: int, db: Session = Depends(get_db)) -> Rev
             for document in documents
             if document_type_value(document) == DocumentType.UNKNOWN.value
         ],
-        unmatched_documents=unmatched_document_ids(db, listing_file),
+        unmatched_documents=[
+            ReviewQueueUnmatched(
+                document_id=document.id,
+                document_name=document.document_name,
+                reason=unmatched_reason(document, listing_file),
+            )
+            for document in documents
+            if document.id in unmatched_ids
+        ],
         pending_verification=[
             _queue_item(requirement)
             for requirement in requirements
             if requirement.state == RequirementState.RECEIVED.value
+        ],
+        overdue=[
+            _queue_item(requirement)
+            for requirement in requirements
+            if is_overdue(listing_file, requirement, threshold_days=overdue_days)
         ],
     )
 

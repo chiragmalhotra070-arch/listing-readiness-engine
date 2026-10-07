@@ -50,12 +50,14 @@ def test_review_queue_is_empty_on_fresh_file(client):
         "unknown_documents",
         "unmatched_documents",
         "pending_verification",
+        "overdue",
     }
     assert body["listing_file_id"] == file_id
     assert body["exceptions"] == []
     assert body["unknown_documents"] == []
     assert body["unmatched_documents"] == []
     assert body["pending_verification"] == []
+    assert body["overdue"] == []
 
 
 def test_review_queue_unknown_listing_file_is_404(client):
@@ -74,7 +76,13 @@ def test_review_queue_buckets_unknown_document_and_flagged_requirement(client):
     client.post(f"/v1/listing-files/{file_id}/reconcile")
 
     queue = _queue(client, file_id)
-    assert queue["unmatched_documents"] == [unknown_doc]
+    assert queue["unmatched_documents"] == [
+        {
+            "document_id": unknown_doc,
+            "document_name": "unknown_document.pdf",
+            "reason": "no_evidence",
+        }
+    ]
     assert queue["unknown_documents"] == [
         {"document_id": unknown_doc, "document_name": "unknown_document.pdf"}
     ]
@@ -102,7 +110,13 @@ def test_review_queue_buckets_unknown_document_and_flagged_requirement(client):
     assert queue["exceptions"][0]["state"] == "EXCEPTION"
     assert queue["exceptions"][0]["state_reason"] == "seller signature missing"
     assert queue["pending_verification"] == []
-    assert queue["unmatched_documents"] == [unknown_doc]
+    assert queue["unmatched_documents"] == [
+        {
+            "document_id": unknown_doc,
+            "document_name": "unknown_document.pdf",
+            "reason": "no_evidence",
+        }
+    ]
     assert queue["unknown_documents"] == [
         {"document_id": unknown_doc, "document_name": "unknown_document.pdf"}
     ]

@@ -7,6 +7,10 @@ from sqlalchemy.orm import Session
 from app.db.models import AuditEvent, Document, Email
 from app.services.text_sanitization import ensure_jsonb_value
 
+#: The only identity a v1 review action carries: the key it authenticated
+#: with.  Shared by the review-queue mutations and the detection stage.
+REVIEW_ACTOR = "intake-api-key"
+
 
 def record_audit(db: Session, *, event_type: str, status: str, message: str, document_id: int | None = None, email_id: int | None = None, details: dict[str, Any] | None = None) -> None:
     # ``audit_events.details`` is JSONB: a NUL nested in provider diagnostics or

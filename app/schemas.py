@@ -472,6 +472,9 @@ class DocumentExtracted(BaseModel):
     document_id: int
     document_type: str
     extracted_data: dict[str, Any]
+    #: Stage 1 canonical view of the shared fact fields (exact-after-
+    #: normalization); the raw ``extracted_data`` above is never rewritten.
+    normalized_data: dict[str, Any]
 
 
 class ReconciliationReport(BaseModel):
@@ -494,6 +497,13 @@ class VerdictResponse(BaseModel):
     advisory: list[str]
 
 
+class ReadoutRequirement(RequirementSummary):
+    """One requirement as the readout reports it: ``overdue`` is derived
+    (PENDING past ``settings.requirement_overdue_days``), never persisted."""
+
+    overdue: bool = False
+
+
 class ListingFileReadout(BaseModel):
     """GET /listing-files/{id} -- the whole file state in one read."""
 
@@ -505,7 +515,7 @@ class ListingFileReadout(BaseModel):
     verdict: Optional[str]
     reason: Optional[str]
     readiness_assessed_at: Optional[datetime]
-    requirements: list[RequirementSummary]
+    requirements: list[ReadoutRequirement]
     unmatched_document_ids: list[int]
 
 
@@ -528,20 +538,78 @@ class ReviewQueueDocument(BaseModel):
     document_name: str
 
 
+class ReviewQueueUnmatched(BaseModel):
+    """One document no requirement has evidence for, and why it is unmatched:
+
+    ``property_mismatch`` -- Stage 2 quarantined it (its APN/address
+    disagrees with the file's property identity); ``no_evidence`` -- no
+    requirement bound it (unknown classification, unrequested type, or
+    uploaded since the last reconcile).
+    """
+
+    document_id: int
+    document_name: str
+    reason: Literal["property_mismatch", "no_evidence"]
+
+
 class ReviewQueue(BaseModel):
     """GET /listing-files/{id}/review-queue -- everything a human must act on.
 
     Flat buckets, no ranking and no confidence threshold: every requirement
     in ``EXCEPTION``, every ``RECEIVED`` requirement (pending verification),
-    every ``UNKNOWN`` document, and -- as in the readout -- every document
-    no requirement has evidence for.
+    every ``UNKNOWN`` document, every document no requirement has evidence
+    for (with its reason), and every ``PENDING`` requirement past the
+    overdue threshold.
     """
 
     listing_file_id: int
     exceptions: list[ReviewQueueItem]
     unknown_documents: list[ReviewQueueDocument]
-    unmatched_documents: list[int]
+    unmatched_documents: list[ReviewQueueUnmatched]
     pending_verification: list[ReviewQueueItem]
+    overdue: list[ReviewQueueItem]
+
+
+class ConflictFinding(BaseModel):
+    """R1: one field where evidence documents disagree after normalization."""
+
+    field: str
+    values: list[str]
+    document_ids: list[int]
+    requirement_keys: list[str]
+    reason: str
+
+
+class MissingSignatureFinding(BaseModel):
+    """R2: an unsigned signature-bearing evidence document."""
+
+    requirement_key: str
+    document_type: str
+    document_id: int
+    reason: str
+
+
+class OverdueRequirementFinding(BaseModel):
+    """R3: a PENDING requirement past ``settings.requirement_overdue_days``."""
+
+    requirement_key: str
+    requirement_id: int
+    days_pending: int
+
+
+class DetectExceptionsReport(BaseModel):
+    """POST /listing-files/{id}/detect-exceptions -- R1/R2/R3 findings.
+
+    ``exceptions_raised`` counts requirement state changes this pass made
+    (R1/R2 only; R3 never mutates).  The verdict is not recomputed here --
+    run the verdict stage afterwards to roll the new states up.
+    """
+
+    listing_file_id: int
+    conflicts: list[ConflictFinding]
+    missing_signatures: list[MissingSignatureFinding]
+    overdue: list[OverdueRequirementFinding]
+    exceptions_raised: int
 
 
 class RequirementVerifyRequest(BaseModel):

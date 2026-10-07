@@ -18,6 +18,10 @@ V0 boundaries (deliberate):
   classifier).  They are still reported in ``unmatched_document_ids`` so
   the caller can route them to review — they simply never create
   evidence.
+- Property-mismatch documents are excluded the same way (Slice 9 Stage
+  2): a document whose canonical APN/address disagrees with the file's
+  property identity is quarantined, never matched, and reported
+  unmatched with the ``property_mismatch`` reason in the review queue.
 - Idempotency is code-checked: an existing ``(requirement_id,
   document_id)`` pair never gets a second ``Evidence`` row, so a re-run
   creates nothing.  No migration needed for this slice.
@@ -34,6 +38,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Document, Evidence, ListingFile, Requirement, RequirementRule
 from app.domain.enums import DocumentType, EvidenceSource, RequirementState
+from app.services.property_resolution import is_property_mismatch
 
 #: Never matches: unknown classification routes to human review.
 UNKNOWN_DOCUMENT_TYPE = DocumentType.UNKNOWN.value
@@ -121,7 +126,14 @@ def reconcile_listing_file(session: Session, listing_file: ListingFile) -> Recon
         .all()
     )
     # UNKNOWN never matches; it is reported unmatched instead (review routing).
-    matchable = [document for document in documents if document_type_value(document) != UNKNOWN_DOCUMENT_TYPE]
+    # Quarantined property mismatches never match either (Stage 2); both
+    # kinds of document still land in ``unmatched_document_ids``.
+    matchable = [
+        document
+        for document in documents
+        if document_type_value(document) != UNKNOWN_DOCUMENT_TYPE
+        and not is_property_mismatch(document, listing_file)
+    ]
 
     rules = _load_rules(session, requirements)
     pairs, evidence_counts = _existing_evidence(session, requirements)

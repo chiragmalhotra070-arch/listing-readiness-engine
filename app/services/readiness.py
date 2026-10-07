@@ -22,6 +22,10 @@ V0 boundaries (deliberate):
   ``RECEIVED``): ``VERIFIED`` comes from human review via
   ``POST /requirements/{id}/verify`` (Slice 8).  Until a person verifies,
   ``CONDITIONALLY_READY`` is the highest verdict a file can reach.
+- ``dimensions`` are three ratios over the blocking set (completeness,
+  consistency, compliance), rounded to 3 decimals and computed fresh per
+  verdict — never persisted.  A file with no blocking requirements
+  reports 1.0 for each (an empty blocking set is vacuously complete).
 """
 
 from __future__ import annotations
@@ -42,6 +46,24 @@ BLOCKING_STATUSES = frozenset({
 
 
 @dataclass(frozen=True)
+class VerdictDimensions:
+    """Three blocking-set ratios, each rounded to 3 decimals.
+
+    completeness — blocking requirements RECEIVED or VERIFIED / blocking
+    consistency — blocking requirements not in EXCEPTION / blocking
+    compliance — blocking requirements VERIFIED / blocking
+    """
+
+    completeness: float
+    consistency: float
+    compliance: float
+
+
+#: ``blocking_total == 0``: an empty blocking set is vacuously complete.
+_NO_BLOCKING_DIMENSIONS = VerdictDimensions(completeness=1.0, consistency=1.0, compliance=1.0)
+
+
+@dataclass(frozen=True)
 class VerdictResult:
     """The verdict plus the requirement keys behind each branch."""
 
@@ -51,6 +73,7 @@ class VerdictResult:
     blocking_exceptions: list[str] = field(default_factory=list)
     pending_verification: list[str] = field(default_factory=list)
     advisory: list[str] = field(default_factory=list)
+    dimensions: VerdictDimensions = field(default_factory=lambda: _NO_BLOCKING_DIMENSIONS)
 
 
 def _not_ready_reason(missing: list[str], flagged: list[str]) -> str:
@@ -74,6 +97,7 @@ def _classify(requirements: list[Requirement]) -> VerdictResult:
     pending_verification: list[str] = []
     advisory: list[str] = []
     blocking_total = 0
+    blocking_verified = 0
 
     for requirement in requirements:
         key = requirement.requirement_key
@@ -89,6 +113,17 @@ def _classify(requirements: list[Requirement]) -> VerdictResult:
             blocking_pending.append(key)
         elif state == RequirementState.RECEIVED.value:
             pending_verification.append(key)
+        elif state == RequirementState.VERIFIED.value:
+            blocking_verified += 1
+
+    if blocking_total:
+        dimensions = VerdictDimensions(
+            completeness=round((len(pending_verification) + blocking_verified) / blocking_total, 3),
+            consistency=round((blocking_total - len(blocking_exceptions)) / blocking_total, 3),
+            compliance=round(blocking_verified / blocking_total, 3),
+        )
+    else:
+        dimensions = _NO_BLOCKING_DIMENSIONS
 
     if blocking_exceptions or blocking_pending:
         verdict = ReadinessVerdict.NOT_READY
@@ -110,6 +145,7 @@ def _classify(requirements: list[Requirement]) -> VerdictResult:
         blocking_exceptions=sorted(blocking_exceptions),
         pending_verification=sorted(pending_verification),
         advisory=sorted(advisory),
+        dimensions=dimensions,
     )
 
 

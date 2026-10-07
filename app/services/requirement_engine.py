@@ -186,6 +186,7 @@ class RequirementEngine:
                     requirement_type=rule.requirement_type,
                     status=rule.status,
                     state=RequirementState.PENDING.value,
+                    owner=rule.owner,
                 )
                 session.add(requirement)
             result.append(requirement)

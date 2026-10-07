@@ -79,8 +79,12 @@ def test_generate_requirements_creates_twelve_for_full_ca_file(client):
         "agent_visual_inspection", "ca_nhd", "wcmd_advisory", "lead_disclosure",
         "hoa_package", "solar_agreement", "prelim_title_report",
     }
-    assert all(set(requirement) == {"requirement_key", "requirement_type", "status", "state"} for requirement in requirements)
+    assert all(set(requirement) == {"requirement_key", "requirement_type", "status", "state", "owner"} for requirement in requirements)
     assert all(requirement["state"] == "PENDING" for requirement in requirements)
+    owners = {requirement["requirement_key"]: requirement["owner"] for requirement in requirements}
+    assert owners["ca_tds"] == "seller"
+    assert owners["listing_agreement"] == "agent"
+    assert owners["prelim_title_report"] == "third_party"
 
 
 def test_generate_requirements_is_idempotent(client):
@@ -304,6 +308,8 @@ def test_verdict_is_not_ready_while_required_documents_are_missing(client):
     assert body["advisory"] == ["prelim_title_report"]
     assert "missing:" in body["reason"]
     assert "seller_advisory" in body["reason"]
+    # 1 RECEIVED of 11 blocking; nothing EXCEPTION (1.0), nothing VERIFIED (0.0).
+    assert body["dimensions"] == {"completeness": 0.091, "consistency": 1.0, "compliance": 0.0}
 
 
 def test_verdict_is_conditionally_ready_once_everything_is_received(client):
@@ -359,6 +365,7 @@ def test_readout_returns_file_requirements_and_verdict(client):
     ca_tds = next(r for r in body["requirements"] if r["requirement_key"] == "ca_tds")
     assert ca_tds["status"] == "REQUIRED"
     assert ca_tds["state"] == "RECEIVED"
+    assert ca_tds["owner"] == "seller"
     assert body["unmatched_document_ids"] == []
 
 
@@ -422,3 +429,43 @@ def test_demo_file_end_to_end_reaches_conditionally_ready(client):
     assert readout["verdict"] == "CONDITIONALLY_READY"
     assert all(r["state"] == "RECEIVED" for r in readout["requirements"])
     assert readout["unmatched_document_ids"] == []
+
+
+# ---- GET /documents/{id}/requirement: the evidence binding ----
+
+
+def test_document_requirement_resolves_through_evidence(client):
+    file_id = _create_listing_file(client)["id"]
+    client.post(f"/v1/listing-files/{file_id}/generate-requirements")
+    document_id = _upload_as(client, file_id, "demo-ca-tds.pdf")
+    client.post(f"/v1/documents/{document_id}/classify")
+    assert client.post(f"/v1/listing-files/{file_id}/reconcile").json()["evidence_created"] == 1
+
+    response = client.get(f"/v1/documents/{document_id}/requirement")
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert set(body) == {"requirement_id", "requirement_key", "status", "state", "evidence_source"}
+    assert body["requirement_key"] == "ca_tds"
+    assert body["status"] == "REQUIRED"
+    assert body["state"] == "RECEIVED"
+    assert body["evidence_source"] == "DOCUMENT"
+    assert isinstance(body["requirement_id"], int)
+
+
+def test_document_requirement_unbound_document_is_404(client):
+    file_id = _create_listing_file(client)["id"]
+    client.post(f"/v1/listing-files/{file_id}/generate-requirements")
+    document_id = _upload_as(client, file_id, "demo-ca-tds.pdf")
+
+    response = client.get(f"/v1/documents/{document_id}/requirement")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "document is not bound to any requirement"}
+
+
+def test_document_requirement_unknown_document_is_404(client):
+    response = client.get("/v1/documents/9999/requirement")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "document not found"}

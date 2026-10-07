@@ -469,6 +469,9 @@ class RequirementSummary(BaseModel):
     requirement_type: str
     status: str
     state: str
+    #: Catalog owner vocabulary (seller / agent / third_party), copied from
+    #: the requirement rule at generation time; null until generated.
+    owner: Optional[str] = None
 
 
 class RequirementListResponse(BaseModel):
@@ -477,6 +480,18 @@ class RequirementListResponse(BaseModel):
 
 class DocumentUploaded(BaseModel):
     document_id: int
+
+
+class DocumentRequirement(BaseModel):
+    """GET /documents/{document_id}/requirement -- what this document is
+    evidence for, resolved through the evidence table (document_id ->
+    requirement_id)."""
+
+    requirement_id: int
+    requirement_key: str
+    status: str
+    state: str
+    evidence_source: str
 
 
 class DocumentClassified(BaseModel):
@@ -503,8 +518,25 @@ class ReconciliationReport(BaseModel):
     unmatched_document_ids: list[int]
 
 
+class VerdictDimensions(BaseModel):
+    """Three blocking-set ratios, each rounded to 3 decimals."""
+
+    completeness: float
+    consistency: float
+    compliance: float
+
+
 class VerdictResponse(BaseModel):
-    """POST /listing-files/{id}/verdict -- the rollup verdict for one file."""
+    """POST /listing-files/{id}/verdict -- the rollup verdict for one file.
+
+    ``dimensions`` are computed fresh per verdict (never persisted).
+
+    ``verdict.pending_verification`` lists only blocking (REQUIRED /
+    CONDITIONALLY_REQUIRED) requirements in RECEIVED state; the
+    review-queue ``pending_verification`` bucket lists EVERY received
+    requirement, including RECOMMENDED ones, which the verdict reports
+    under advisory instead.
+    """
 
     verdict: str
     reason: str
@@ -512,6 +544,7 @@ class VerdictResponse(BaseModel):
     blocking_exceptions: list[str]
     pending_verification: list[str]
     advisory: list[str]
+    dimensions: VerdictDimensions
 
 
 class ReadoutRequirement(RequirementSummary):
@@ -647,6 +680,8 @@ class ConflictFinding(BaseModel):
     document_ids: list[int]
     requirement_keys: list[str]
     reason: str
+    #: Engine-assigned at detection time: R1/R2 findings are high, R3 medium.
+    severity: Literal["high", "medium", "low"]
 
 
 class MissingSignatureFinding(BaseModel):
@@ -656,6 +691,8 @@ class MissingSignatureFinding(BaseModel):
     document_type: str
     document_id: int
     reason: str
+    #: Engine-assigned at detection time: R1/R2 findings are high, R3 medium.
+    severity: Literal["high", "medium", "low"]
 
 
 class OverdueRequirementFinding(BaseModel):
@@ -664,6 +701,8 @@ class OverdueRequirementFinding(BaseModel):
     requirement_key: str
     requirement_id: int
     days_pending: int
+    #: Engine-assigned at detection time: R1/R2 findings are high, R3 medium.
+    severity: Literal["high", "medium", "low"]
 
 
 class DetectExceptionsReport(BaseModel):

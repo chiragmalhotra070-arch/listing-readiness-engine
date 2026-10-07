@@ -28,6 +28,11 @@ CATALOG_VERSION = "1"
 CATALOG_JURISDICTION = "CA"
 CATALOG_EFFECTIVE_FROM = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
+#: Whose job each requirement is: seller facts/signatures, agent actions,
+#: or third-party/vendor deliverables.  Closed vocabulary — validate_catalog
+#: rejects anything else.
+CATALOG_OWNERS = frozenset({"seller", "agent", "third_party"})
+
 
 def _rule(
     requirement_key: str,
@@ -35,6 +40,7 @@ def _rule(
     status: RequirementStatus,
     document_types: list[DocumentType],
     *,
+    owner: str,
     trigger: dict[str, Any] | None = None,
     timing: str = "pre_listing",
     source: str,
@@ -43,6 +49,7 @@ def _rule(
         "requirement_key": requirement_key,
         "requirement_type": requirement_type.value,
         "status": status.value,
+        "owner": owner,
         "jurisdiction": CATALOG_JURISDICTION,
         "satisfied_by": {"document_types": [dt.value for dt in document_types]},
         "trigger": trigger,
@@ -66,64 +73,76 @@ CA_CATALOG_V1: list[dict[str, Any]] = [
     _rule(
         "listing_agreement", RequirementType.CORE, RequirementStatus.REQUIRED,
         [DocumentType.LISTING_AGREEMENT],
+        owner="agent",
         source="CAR RLA — brokerage listing contract",
     ),
     _rule(
         "seller_advisory", RequirementType.CORE, RequirementStatus.REQUIRED,
         [DocumentType.SELLER_ADVISORY],
+        owner="seller",
         source="CAR SA — pre-listing seller advisory",
     ),
     _rule(
         "agency_disclosure", RequirementType.CORE, RequirementStatus.REQUIRED,
         [DocumentType.AGENCY_DISCLOSURE],
+        owner="agent",
         source="CAR AD — agency disclosure, precedes the listing agreement",
     ),
     _rule(
         "ca_tds", RequirementType.JURISDICTIONAL, RequirementStatus.REQUIRED,
         [DocumentType.CA_TDS],
+        owner="seller",
         source="Cal. Civil Code \u00a71102 et seq. — transfer disclosure statement",
     ),
     _rule(
         "ca_spq", RequirementType.JURISDICTIONAL, RequirementStatus.REQUIRED,
         [DocumentType.CA_SPQ],
+        owner="seller",
         source="CAR SPQ — seller property questionnaire, supplements TDS",
     ),
     _rule(
         "agent_visual_inspection", RequirementType.JURISDICTIONAL, RequirementStatus.REQUIRED,
         [DocumentType.AGENT_VISUAL_INSPECTION],
+        owner="agent",
         source="Cal. Civil Code \u00a71102.6 — agent visual inspection disclosure",
     ),
     _rule(
         "ca_nhd", RequirementType.JURISDICTIONAL, RequirementStatus.REQUIRED,
         [DocumentType.CA_NHD],
+        owner="third_party",
         source="Cal. Civil Code \u00a71103 et seq. — natural hazard disclosure",
     ),
     _rule(
         "wcmd_advisory", RequirementType.JURISDICTIONAL, RequirementStatus.REQUIRED,
         [DocumentType.WCMD_ADVISORY],
+        owner="agent",
         source="Cal. Civil Code \u00a7\u00a71101.1\u20131101.8 (SB 407) — water-conserving fixtures",
     ),
     _rule(
         "lead_disclosure", RequirementType.FEDERAL, RequirementStatus.CONDITIONALLY_REQUIRED,
         [DocumentType.LEAD_DISCLOSURE],
+        owner="seller",
         trigger=_lt("year_built", 1978),
         source="42 USC \u00a74852d — federal lead-based paint disclosure",
     ),
     _rule(
         "hoa_package", RequirementType.PROPERTY_CONDITIONAL, RequirementStatus.CONDITIONALLY_REQUIRED,
         [DocumentType.HOA_PACKAGE],
+        owner="third_party",
         trigger=_eq("hoa", True),
         source="HOA resale package — CC&Rs, budget, minutes",
     ),
     _rule(
         "solar_agreement", RequirementType.PROPERTY_CONDITIONAL, RequirementStatus.CONDITIONALLY_REQUIRED,
         [DocumentType.SOLAR_AGREEMENT],
+        owner="third_party",
         trigger=_eq("solar", True),
         source="Solar ownership / financing agreement",
     ),
     _rule(
         "prelim_title_report", RequirementType.BROKERAGE, RequirementStatus.RECOMMENDED,
         [DocumentType.PRELIM_TITLE_REPORT],
+        owner="third_party",
         source="Brokerage file-completeness — preliminary title report",
     ),
 ]
@@ -141,13 +160,20 @@ def validate_catalog(entries: list[dict[str, Any]]) -> None:
         seen.add(key)
         RequirementType(entry["requirement_type"])
         RequirementStatus(entry["status"])
+        owner = entry.get("owner")
+        if owner not in CATALOG_OWNERS:
+            raise ValueError(f"catalog entry {key!r} has invalid owner: {owner!r}")
         for document_type in entry["satisfied_by"]["document_types"]:
             DocumentType(document_type)
         validate_trigger_shape(entry["trigger"])
 
 
 def ensure_ca_catalog(session: Session) -> int:
-    """Insert missing CA v1 rules.  Idempotent; returns rows created."""
+    """Insert missing CA v1 rules.  Idempotent; returns rows created.
+
+    Existing rows get ``owner`` backfilled when it is NULL (rules created
+    before the owner column existed); already-set owners are never touched.
+    """
     validate_catalog(CA_CATALOG_V1)
     created = 0
     for entry in CA_CATALOG_V1:
@@ -159,5 +185,7 @@ def ensure_ca_catalog(session: Session) -> int:
         if exists is None:
             session.add(RequirementRule(**entry))
             created += 1
+        elif exists.owner is None:
+            exists.owner = entry["owner"]
     session.flush()
     return created

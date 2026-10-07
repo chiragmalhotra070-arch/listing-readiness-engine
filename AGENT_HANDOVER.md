@@ -27,7 +27,7 @@ Portfolio project #1 for an AI automation engineering practice niched specifical
 - **Stack:** Python 3.11, FastAPI, SQLAlchemy 2, PostgreSQL 16, Alembic. Tests: `pytest`, SQLite-backed except 23 Postgres-only skips.
 - **Docker:** one compose package (`db` + `listing-api` + `worker`) in the repo root — the api service is named `listing-api` so its network alias never collides with the financial stack's `api`. Listing ports: API **host 8011 → container 8010**; Postgres **host 5454 → container 5432**. The financial-engine stack (8010/5432) and `schema-audit-pg` (5433) are separate projects — **never touch them**.
 - **Compose env:** `LLM_PROMPT_VERSION=v2` (must stay v2; v1 is the old financial prompt).
-- **Alembic:** single head `0016_listing_idempotency_key`; 16 tables; `listing_engine` database.
+- **Alembic:** single head `0018_requirement_owner`; `listing_engine` database.
 - **Mac Docker note:** if the `docker` CLI hangs, the default socket is wedged — re-run with `DOCKER_HOST=$HOME/Library/Containers/com.docker.docker/Data/docker.raw.sock` (same daemon, no restart). Never restart Docker Desktop while production n8n containers are running.
 
 ## 4. Journey so far
@@ -57,12 +57,13 @@ Portfolio project #1 for an AI automation engineering practice niched specifical
 | LLM | `app/adapters/llm.py` — prompt v2, mock profiles, `_DEMO_FIXTURE_PROFILES` |
 | Requirement catalog | `app/services/requirement_catalog.py` — CA v1, 12 versioned rules |
 | Requirement engine | `app/services/requirement_engine.py` — predicate evaluator + `generate()` |
-| Migration | `migrations/versions/` — head `0016_listing_idempotency_key` (0014 domain, 0015 consistency, 0016 idempotency + `processing_failures`) |
+| Migration | `migrations/versions/` — head `0018_requirement_owner` (0014 domain, 0015 consistency, 0016 idempotency + `processing_failures`, 0017 customer-aware intake, 0018 catalog owner) |
 
 ## 6. Current state
 
-- **Suite:** `626 passed / 23 skipped` (`.venv/bin/python -m pytest -q`). Green is the commit gate.
-- **Alembic:** head `0016_listing_idempotency_key`, applied on the live DB.
+- **Suite:** `659 passed / 23 skipped` (`.venv/bin/python -m pytest -q`). Green is the commit gate.
+- **Alembic:** head `0018_requirement_owner`, applied on the live DB.
+- **Pending-verification semantics:** `verdict.pending_verification` lists only blocking (REQUIRED / CONDITIONALLY_REQUIRED) requirements in RECEIVED state; the review-queue `pending_verification` bucket lists EVERY received requirement, including RECOMMENDED ones, which the verdict reports under advisory instead.
 - **Issue tracker:** GitHub Issues via `gh` (see `docs/agents/issue-tracker.md`) — currently empty; briefs arrive as paste-ready prompts, not issues.
 - **n8n:** `Listing Readiness v1` published (workflow `54mDZXfkhnuJPhlY`), 19 nodes, export kept in sync in `n8n/workflows/listing-readiness-v1.json`. Known export artifacts: `active: false`, canvas positions differ from live.
 - **Canvas note:** the per-document loop cluster cannot form a valid node group (loop-back edge + error branches violate single-entry/single-exit), so it is intentionally ungrouped — flagged `[pre-existing]` by the MCP validator.

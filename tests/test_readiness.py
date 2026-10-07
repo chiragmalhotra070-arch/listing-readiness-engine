@@ -20,7 +20,7 @@ from app.domain.enums import (
     RequirementStatus,
     RequirementType,
 )
-from app.services.readiness import compute_verdict
+from app.services.readiness import VerdictDimensions, compute_verdict
 from app.services.requirement_catalog import ensure_ca_catalog
 from app.services.requirement_engine import RequirementEngine
 
@@ -233,6 +233,7 @@ def test_no_requirements_is_not_ready(db):
     assert result.blocking_exceptions == []
     assert result.pending_verification == []
     assert result.advisory == []
+    assert result.dimensions == VerdictDimensions(1.0, 1.0, 1.0)
     assert db.query(Requirement).count() == 0
 
 
@@ -296,3 +297,44 @@ def test_full_demo_shape(db):
     assert missing.verdict == ReadinessVerdict.NOT_READY
     assert missing.blocking_pending == ["ca_tds"]
     assert "missing: ca_tds" in listing_file.readiness_reason
+
+
+def test_dimensions_use_the_blocking_set_as_denominator(db):
+    listing_file = _file(db, **CA_1968_HOA_SOLAR)
+    _generate(db, listing_file)
+    # Twelve all-blocking requirements: the RECOMMENDED one made REQUIRED.
+    db.query(Requirement).filter_by(listing_file_id=listing_file.id).update(
+        {"status": RequirementStatus.REQUIRED.value}, synchronize_session=False
+    )
+    db.flush()
+    keys = sorted(_states(db, listing_file))
+    for key in keys[:6]:
+        _set_state(db, listing_file, key, RequirementState.RECEIVED)
+
+    received = compute_verdict(db, listing_file)
+
+    assert received.dimensions == VerdictDimensions(
+        completeness=0.5, consistency=1.0, compliance=0.0
+    )
+
+    for key in keys[:6]:
+        _set_state(db, listing_file, key, RequirementState.VERIFIED)
+    verified = compute_verdict(db, listing_file)
+
+    assert verified.dimensions == VerdictDimensions(
+        completeness=0.5, consistency=1.0, compliance=0.5
+    )
+
+
+def test_dimensions_are_all_one_when_nothing_blocks(db):
+    listing_file = _file(db, **CA_1968_HOA_SOLAR)
+    _generate(db, listing_file)
+    db.query(Requirement).filter_by(listing_file_id=listing_file.id).update(
+        {"status": RequirementStatus.RECOMMENDED.value}, synchronize_session=False
+    )
+    db.flush()
+
+    result = compute_verdict(db, listing_file)
+
+    assert result.verdict == ReadinessVerdict.READY
+    assert result.dimensions == VerdictDimensions(1.0, 1.0, 1.0)

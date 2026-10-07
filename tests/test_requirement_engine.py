@@ -260,3 +260,61 @@ def test_select_rules_respects_effective_window():
         effective_from=datetime(2030, 1, 1, tzinfo=timezone.utc),
     )
     assert select_rules([future], {"state": "CA"}) == []
+
+
+# ---- catalog owner vocabulary (seller / agent / third_party) ----
+
+EXPECTED_OWNERS = {
+    "listing_agreement": "agent",
+    "seller_advisory": "seller",
+    "agency_disclosure": "agent",
+    "ca_tds": "seller",
+    "ca_spq": "seller",
+    "agent_visual_inspection": "agent",
+    "ca_nhd": "third_party",
+    "wcmd_advisory": "agent",
+    "lead_disclosure": "seller",
+    "hoa_package": "third_party",
+    "solar_agreement": "third_party",
+    "prelim_title_report": "third_party",
+}
+
+
+def test_catalog_entries_declare_the_expected_owner():
+    assert {entry["requirement_key"]: entry["owner"] for entry in CA_CATALOG_V1} == EXPECTED_OWNERS
+    assert {entry["owner"] for entry in CA_CATALOG_V1} <= {"seller", "agent", "third_party"}
+
+
+def test_catalog_rejects_a_missing_owner():
+    bad = dict(CA_CATALOG_V1[0])
+    del bad["owner"]
+
+    with pytest.raises(ValueError, match="invalid owner"):
+        validate_catalog([bad])
+
+
+def test_catalog_rejects_an_unknown_owner():
+    bad = [dict(CA_CATALOG_V1[0], owner="broker")]
+
+    with pytest.raises(ValueError, match="invalid owner"):
+        validate_catalog(bad)
+
+
+def test_ensure_ca_catalog_backfills_owner_onto_existing_rows(db):
+    assert ensure_ca_catalog(db) == 12
+    db.query(RequirementRule).update({"owner": None}, synchronize_session=False)
+    db.flush()
+
+    assert ensure_ca_catalog(db) == 0
+    assert {row.owner for row in db.query(RequirementRule).all()} == set(EXPECTED_OWNERS.values())
+
+
+def test_generate_copies_rule_owner_onto_requirement(db):
+    ensure_ca_catalog(db)
+    listing_file = _file(db, **CA_1968_HOA_SOLAR)
+
+    by_key = {r.requirement_key: r for r in RequirementEngine().generate(db, listing_file)}
+
+    assert by_key["ca_tds"].owner == "seller"
+    assert by_key["listing_agreement"].owner == "agent"
+    assert by_key["prelim_title_report"].owner == "third_party"

@@ -384,3 +384,28 @@ def test_detect_exceptions_reports_no_findings_on_clean_demo_file(client):
     assert queue["exceptions"] == []
     assert queue["unmatched_documents"] == []
     assert len(queue["pending_verification"]) == 12
+
+
+# ---- finding severity: engine-assigned at detection time ----
+
+
+def test_findings_carry_engine_assigned_severity(client, monkeypatch):
+    monkeypatch.setenv("REQUIREMENT_OVERDUE_DAYS", "0")
+    get_settings.cache_clear()
+    file_id = _create_listing_file(client)["id"]
+    _generate(client, file_id)
+    tds_doc = _upload_as(client, file_id, "demo-ca-tds.pdf")
+    _classify(client, tds_doc)
+    conflict_doc = _upload_as(client, file_id, "conflict-seller-ca-spq.pdf")
+    _classify(client, conflict_doc)
+    unsigned_doc = _upload_as(client, file_id, "unsigned-listing-agreement.pdf")
+    _classify(client, unsigned_doc)
+    assert client.post(f"/v1/listing-files/{file_id}/reconcile").json()["evidence_created"] == 3
+
+    report = _detect(client, file_id)
+
+    assert report["conflicts"] and all(item["severity"] == "high" for item in report["conflicts"])
+    assert report["missing_signatures"] and all(
+        item["severity"] == "high" for item in report["missing_signatures"]
+    )
+    assert report["overdue"] and all(item["severity"] == "medium" for item in report["overdue"])

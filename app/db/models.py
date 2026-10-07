@@ -333,6 +333,8 @@ class RequirementRule(Base):
     requirement_key: Mapped[str] = mapped_column(String(64), index=True)
     requirement_type: Mapped[str] = mapped_column(String(32))  # RequirementType
     status: Mapped[str] = mapped_column(String(32))  # RequirementStatus
+    #: Owner vocabulary (seller / agent / third_party); see requirement_catalog.
+    owner: Mapped[Optional[str]] = mapped_column(String(32))
     jurisdiction: Mapped[str] = mapped_column(String(16), index=True)
     satisfied_by: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, info=JSONB_REJECT_NUL)
     trigger: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, info=JSONB_REJECT_NUL)

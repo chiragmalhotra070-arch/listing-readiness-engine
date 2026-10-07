@@ -17,10 +17,10 @@ from sqlalchemy.orm import Session
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from app.config import get_settings
-from app.db.models import Customer, Document, ListingFile, Requirement
+from app.db.models import Customer, Document, Evidence, ListingFile, Requirement
 from app.domain.enums import DocumentType, ProcessingStage, RequirementState
 from app.db.session import get_db
-from app.schemas import AuditEventResponse, ConflictFinding, CustomerCandidates, DetectExceptionsReport, DocumentInput, DocumentReclassifyRequest, DocumentReclassified, DocumentResult, EmailIntakeRequest, EmailIntakeResponse, ListingFileCreate, ListingFileCreated, ListingFileReadout, DocumentClassified, DocumentExtracted, DocumentUploaded, MissingSignatureFinding, N8nIngestRequest, OverdueRequirementFinding, ProcessingAttemptResponse, ProcessingFailedRecorded, ProcessingFailedRequest, ReconciliationReport, ReadoutRequirement, RequirementActionResponse, RequirementFlagRequest, RequirementListResponse, RequirementVerifyRequest, ReviewQueue, ReviewQueueCustomer, ReviewQueueDocument, ReviewQueueItem, ReviewQueueProcessingFailed, ReviewQueueUnmatched, VerdictResponse, RequirementSummary
+from app.schemas import AuditEventResponse, ConflictFinding, CustomerCandidates, DetectExceptionsReport, DocumentInput, DocumentReclassifyRequest, DocumentReclassified, DocumentRequirement, DocumentResult, EmailIntakeRequest, EmailIntakeResponse, ListingFileCreate, ListingFileCreated, ListingFileReadout, DocumentClassified, DocumentExtracted, DocumentUploaded, MissingSignatureFinding, N8nIngestRequest, OverdueRequirementFinding, ProcessingAttemptResponse, ProcessingFailedRecorded, ProcessingFailedRequest, ReconciliationReport, ReadoutRequirement, RequirementActionResponse, RequirementFlagRequest, RequirementListResponse, RequirementVerifyRequest, ReviewQueue, ReviewQueueCustomer, ReviewQueueDocument, ReviewQueueItem, ReviewQueueProcessingFailed, ReviewQueueUnmatched, VerdictDimensions, VerdictResponse, RequirementSummary
 from app.adapters.customer import CustomerLookupAdapter
 from app.adapters.document_parser import DocumentFormatError, DocumentParser, FormatExtractionResult
 from app.adapters.llm import LLMError
@@ -330,6 +330,34 @@ def get_audit(document_id: int, db: Session = Depends(get_db)) -> list[AuditEven
     return DocumentPipeline(get_settings()).audit(document_id, db)
 
 
+@router.get("/documents/{document_id}/requirement", response_model=DocumentRequirement, dependencies=[Depends(require_intake_api_key)])
+def get_document_requirement(document_id: int, db: Session = Depends(get_db)) -> DocumentRequirement:
+    """The requirement this document is evidence for.
+
+    Resolved through the evidence table (document_id -> requirement_id);
+    404 when the document exists but no requirement has it as evidence.
+    """
+    if db.get(Document, document_id) is None:
+        raise HTTPException(status_code=404, detail="document not found")
+    row = (
+        db.query(Evidence, Requirement)
+        .join(Requirement, Evidence.requirement_id == Requirement.id)
+        .filter(Evidence.document_id == document_id)
+        .order_by(Evidence.id)
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="document is not bound to any requirement")
+    evidence, requirement = row
+    return DocumentRequirement(
+        requirement_id=requirement.id,
+        requirement_key=requirement.requirement_key,
+        status=requirement.status,
+        state=requirement.state,
+        evidence_source=evidence.source,
+    )
+
+
 @router.post("/documents/{document_id}/retry", response_model=DocumentResult, dependencies=[Depends(require_intake_api_key)])
 def retry_document(document_id: int, db: Session = Depends(get_db)) -> DocumentResult:
     try:
@@ -507,6 +535,7 @@ def generate_listing_requirements(listing_file_id: int, db: Session = Depends(ge
                 requirement_type=requirement.requirement_type,
                 status=requirement.status,
                 state=requirement.state,
+                owner=requirement.owner,
             )
             for requirement in requirements
         ]
@@ -791,6 +820,7 @@ def compute_listing_verdict(listing_file_id: int, db: Session = Depends(get_db))
         blocking_exceptions=result.blocking_exceptions,
         pending_verification=result.pending_verification,
         advisory=result.advisory,
+        dimensions=VerdictDimensions(**asdict(result.dimensions)),
     )
 
 
@@ -827,6 +857,7 @@ def get_listing_file_readout(listing_file_id: int, db: Session = Depends(get_db)
                 requirement_type=requirement.requirement_type,
                 status=requirement.status,
                 state=requirement.state,
+                owner=requirement.owner,
                 overdue=is_overdue(listing_file, requirement, threshold_days=overdue_days),
             )
             for requirement in requirements
@@ -925,6 +956,12 @@ def get_review_queue(listing_file_id: int, db: Session = Depends(get_db)) -> Rev
     orchestrator gave up on (latest exhaustion report per stage);
     ``customer_needs_review`` shows the file itself when its seller could
     not be resolved unambiguously at intake.
+
+    ``verdict.pending_verification`` lists only blocking (REQUIRED /
+    CONDITIONALLY_REQUIRED) requirements in RECEIVED state; the
+    review-queue ``pending_verification`` bucket lists EVERY received
+    requirement, including RECOMMENDED ones, which the verdict reports
+    under advisory instead.
     """
     listing_file = db.get(ListingFile, listing_file_id)
     if listing_file is None:

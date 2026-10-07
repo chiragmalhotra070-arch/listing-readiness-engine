@@ -42,6 +42,12 @@ from app.services.reconciliation import document_type_value
 #: R1: facts that must agree across a file's evidence documents.
 CONFLICT_FIELDS: tuple[str, ...] = ("apn", "property_address", "seller_name")
 
+#: Severity is engine-assigned at detection time, never caller-supplied:
+#: R1/R2 raise blocking exceptions (high); R3 only surfaces chase work
+#: without mutating state (medium).
+SEVERITY_HIGH = "high"
+SEVERITY_MEDIUM = "medium"
+
 #: R2 rule configuration: whose documents must carry signatures, and which
 #: extracted flag proves it.  Data, not code -- extend the tuple to widen it.
 SIGNATURE_RULE_CONFIG: dict[str, Any] = {
@@ -60,6 +66,7 @@ class Conflict:
     document_ids: list[int]
     requirement_keys: list[str]
     reason: str
+    severity: str
 
 
 @dataclass(frozen=True)
@@ -70,6 +77,7 @@ class MissingSignature:
     document_type: str
     document_id: int
     reason: str
+    severity: str
 
 
 @dataclass(frozen=True)
@@ -79,6 +87,7 @@ class OverdueEntry:
     requirement_key: str
     requirement_id: int
     days_pending: int
+    severity: str
 
 
 @dataclass(frozen=True)
@@ -201,6 +210,7 @@ def _detect_conflicts(
                 document_ids=document_ids,
                 requirement_keys=requirement_keys,
                 reason=reason,
+                severity=SEVERITY_HIGH,
             )
         )
     return conflicts
@@ -265,6 +275,7 @@ def detect_exceptions(
                     document_type=document_type,
                     document_id=document.id,
                     reason=reason,
+                    severity=SEVERITY_HIGH,
                 )
             )
             if requirement.state != RequirementState.EXCEPTION.value:
@@ -285,6 +296,7 @@ def detect_exceptions(
             requirement_key=requirement.requirement_key,
             requirement_id=requirement.id,
             days_pending=age_days,
+            severity=SEVERITY_MEDIUM,
         )
         for requirement in requirements
         if is_overdue(listing_file, requirement, threshold_days=overdue_days, now=moment)

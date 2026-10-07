@@ -297,6 +297,11 @@ class ListingFile(Base):
     apn: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     # Resolved seller identity (display name; null until resolved).
     seller_name: Mapped[Optional[str]] = mapped_column(String(255), info=FREE_FORM_TEXT)
+    #: Customer-aware intake: which customer the seller resolved to at
+    #: create time (null when no seller was supplied or resolution is
+    #: ambiguous), and how (EXISTING_CUSTOMER / NEW_CUSTOMER / NEEDS_REVIEW).
+    customer_id: Mapped[Optional[int]] = mapped_column(ForeignKey("customers.id"), index=True)
+    customer_resolution: Mapped[Optional[str]] = mapped_column(String(32))
     # Fact sheet for the requirement engine.
     property_attributes: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, info=JSONB_REJECT_NUL)
     # Readiness verdict (ReadinessVerdict); null until assessed.

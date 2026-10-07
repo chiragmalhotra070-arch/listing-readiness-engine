@@ -7,18 +7,21 @@ import hmac
 from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Optional
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Request, Response, UploadFile
 from pydantic import ValidationError
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from app.config import get_settings
-from app.db.models import Document, ListingFile, Requirement
+from app.db.models import Customer, Document, ListingFile, Requirement
 from app.domain.enums import DocumentType, ProcessingStage, RequirementState
 from app.db.session import get_db
-from app.schemas import AuditEventResponse, ConflictFinding, DetectExceptionsReport, DocumentInput, DocumentReclassifyRequest, DocumentReclassified, DocumentResult, EmailIntakeRequest, EmailIntakeResponse, ListingFileCreate, ListingFileCreated, ListingFileReadout, DocumentClassified, DocumentExtracted, DocumentUploaded, MissingSignatureFinding, N8nIngestRequest, OverdueRequirementFinding, ProcessingAttemptResponse, ProcessingFailedRecorded, ProcessingFailedRequest, ReconciliationReport, ReadoutRequirement, RequirementActionResponse, RequirementFlagRequest, RequirementListResponse, RequirementVerifyRequest, ReviewQueue, ReviewQueueDocument, ReviewQueueItem, ReviewQueueProcessingFailed, ReviewQueueUnmatched, VerdictResponse, RequirementSummary
+from app.schemas import AuditEventResponse, ConflictFinding, CustomerCandidates, DetectExceptionsReport, DocumentInput, DocumentReclassifyRequest, DocumentReclassified, DocumentResult, EmailIntakeRequest, EmailIntakeResponse, ListingFileCreate, ListingFileCreated, ListingFileReadout, DocumentClassified, DocumentExtracted, DocumentUploaded, MissingSignatureFinding, N8nIngestRequest, OverdueRequirementFinding, ProcessingAttemptResponse, ProcessingFailedRecorded, ProcessingFailedRequest, ReconciliationReport, ReadoutRequirement, RequirementActionResponse, RequirementFlagRequest, RequirementListResponse, RequirementVerifyRequest, ReviewQueue, ReviewQueueCustomer, ReviewQueueDocument, ReviewQueueItem, ReviewQueueProcessingFailed, ReviewQueueUnmatched, VerdictResponse, RequirementSummary
+from app.adapters.customer import CustomerLookupAdapter
 from app.adapters.document_parser import DocumentFormatError, DocumentParser, FormatExtractionResult
 from app.adapters.llm import LLMError
 from app.adapters.ocr import OCRExtractionAdapter, build_ocr_extractor
@@ -368,6 +371,19 @@ def persist_or_422(db: Session) -> None:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
+def _stored_listing_file_created(db: Session, listing_file: ListingFile) -> ListingFileCreated:
+    """Replay view of an existing row: stored resolution, never re-resolved."""
+    customer_id = None
+    if listing_file.customer_id is not None:
+        customer = db.get(Customer, listing_file.customer_id)
+        customer_id = customer.customer_id if customer is not None else None
+    return ListingFileCreated(
+        id=listing_file.id,
+        customer_id=customer_id,
+        customer_resolution=listing_file.customer_resolution,
+    )
+
+
 @router.post("/listing-files", response_model=ListingFileCreated, status_code=201, dependencies=[Depends(require_intake_api_key)])
 def create_listing_file(payload: ListingFileCreate, response: Response, db: Session = Depends(get_db)) -> ListingFileCreated:
     """Stage 1 of the listing workflow: create the file.
@@ -380,6 +396,17 @@ def create_listing_file(payload: ListingFileCreate, response: Response, db: Sess
     lookup-first check serves the normal replay; the partial unique index
     (``uq_listing_files_idempotency_key``) catches the check-then-insert
     race, and a losing writer re-reads the winner instead of failing.
+    Replays return the winner's stored customer resolution -- resolution
+    never re-runs, so a replay can't create a duplicate customer.
+
+    Customer-aware intake: when a seller name is supplied it is resolved
+    against the customer master via ``CustomerLookupAdapter``.  An
+    unambiguous match links the existing customer (EXISTING_CUSTOMER), a
+    fresh name creates one with the ``CUST-{pk:06d}`` business key
+    (NEW_CUSTOMER), and an ambiguous match never creates anything -- it
+    stores NEEDS_REVIEW on the file and writes a ``CUSTOMER_RESOLUTION``
+    audit event so the review queue can surface it.  No seller name means
+    no resolution: both response fields stay null.
     """
     ensure_jsonb_value(payload.property_attributes, "listing_files.property_attributes")
     if payload.idempotency_key is not None:
@@ -390,7 +417,28 @@ def create_listing_file(payload: ListingFileCreate, response: Response, db: Sess
         )
         if existing is not None:
             response.status_code = 200
-            return ListingFileCreated(id=existing.id)
+            return _stored_listing_file_created(db, existing)
+    seller_name = (payload.seller_name or "").strip()
+    customer: Customer | None = None
+    customer_resolution: str | None = None
+    match = None
+    if seller_name:
+        match = CustomerLookupAdapter().lookup(
+            db=db,
+            extracted_data={},
+            customer_candidates=CustomerCandidates(customer_name_candidates=[seller_name]),
+        )
+        customer_resolution = match.customer_type
+        if match.customer_type == "EXISTING_CUSTOMER":
+            customer = db.scalar(select(Customer).where(Customer.customer_id == match.customer_id))
+        elif match.customer_type == "NEW_CUSTOMER":
+            # ``customers.customer_id`` is NOT NULL unique but the business
+            # key derives from the pk: stage a unique placeholder, flush for
+            # the pk, then stamp ``CUST-{pk:06d}`` before anything reads it.
+            customer = Customer(customer_name=seller_name, customer_id=f"pending-{uuid4().hex}")
+            db.add(customer)
+            db.flush()
+            customer.customer_id = f"CUST-{customer.id:06d}"
     listing_file = ListingFile(
         property_address=payload.property_address,
         apn=payload.apn,
@@ -398,9 +446,26 @@ def create_listing_file(payload: ListingFileCreate, response: Response, db: Sess
         property_attributes=payload.property_attributes,
         idempotency_key=payload.idempotency_key,
     )
+    if customer is not None:
+        listing_file.customer_id = customer.id
+    listing_file.customer_resolution = customer_resolution
     db.add(listing_file)
     try:
         persist_or_422(db)
+        if match is not None and match.customer_type == "NEEDS_REVIEW":
+            record_audit(
+                db,
+                event_type="CUSTOMER_RESOLUTION",
+                status="NEEDS_REVIEW",
+                message=match.reason,
+                details={
+                    "listing_file_id": listing_file.id,
+                    "seller_name": payload.seller_name,
+                    "customer_type": match.customer_type,
+                    "reason": match.reason,
+                    "actor": REVIEW_ACTOR,
+                },
+            )
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -414,8 +479,12 @@ def create_listing_file(payload: ListingFileCreate, response: Response, db: Sess
         if existing is None:
             raise
         response.status_code = 200
-        return ListingFileCreated(id=existing.id)
-    return ListingFileCreated(id=listing_file.id)
+        return _stored_listing_file_created(db, existing)
+    return ListingFileCreated(
+        id=listing_file.id,
+        customer_id=customer.customer_id if customer is not None else None,
+        customer_resolution=customer_resolution,
+    )
 
 
 @router.post("/listing-files/{listing_file_id}/generate-requirements", response_model=RequirementListResponse, dependencies=[Depends(require_intake_api_key)])
@@ -845,7 +914,7 @@ def report_processing_failed(
 
 @router.get("/listing-files/{listing_file_id}/review-queue", response_model=ReviewQueue, dependencies=[Depends(require_intake_api_key)])
 def get_review_queue(listing_file_id: int, db: Session = Depends(get_db)) -> ReviewQueue:
-    """The human review queue: what needs a person, in six flat buckets.
+    """The human review queue: what needs a person, in seven flat buckets.
 
     A projection of current state only -- no ranking, no confidence
     threshold.  ``unknown_documents`` is a classification outcome;
@@ -853,7 +922,9 @@ def get_review_queue(listing_file_id: int, db: Session = Depends(get_db)) -> Rev
     (unknown ones included) with each document's unmatched reason;
     ``overdue`` surfaces PENDING requirements past the configured threshold
     without changing their state; ``processing_failed`` shows documents the
-    orchestrator gave up on (latest exhaustion report per stage).
+    orchestrator gave up on (latest exhaustion report per stage);
+    ``customer_needs_review`` shows the file itself when its seller could
+    not be resolved unambiguously at intake.
     """
     listing_file = db.get(ListingFile, listing_file_id)
     if listing_file is None:
@@ -904,6 +975,11 @@ def get_review_queue(listing_file_id: int, db: Session = Depends(get_db)) -> Rev
             if is_overdue(listing_file, requirement, threshold_days=overdue_days)
         ],
         processing_failed=_processing_failed_rows(documents),
+        customer_needs_review=(
+            [ReviewQueueCustomer(listing_file_id=listing_file.id, seller_name=listing_file.seller_name)]
+            if listing_file.customer_resolution == "NEEDS_REVIEW"
+            else []
+        ),
     )
 
 

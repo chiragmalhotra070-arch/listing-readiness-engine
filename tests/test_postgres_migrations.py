@@ -73,7 +73,7 @@ def test_alembic_reaches_a_single_head(migrated):
     with engine.connect() as conn:
         rows = [row[0] for row in conn.execute(text("SELECT version_num FROM alembic_version"))]
     engine.dispose()
-    assert rows == ["0013_tighten_run_foreign_keys"]
+    assert rows == ["0017_customer_aware_intake"]
 
 
 def test_reference_architecture_is_not_created(migrated):

@@ -42,7 +42,7 @@ def _create_listing_file(client, *, property_attributes: dict | None = None) -> 
 def test_create_listing_file_returns_id(client):
     body = _create_listing_file(client)
 
-    assert set(body) == {"id"}
+    assert set(body) == {"id", "customer_id", "customer_resolution"}
     assert isinstance(body["id"], int)
 
 

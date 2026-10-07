@@ -107,6 +107,7 @@ STRUCTURED_SAMPLES = [
     "processing_attempts.failure_code",
     "extracted_fields.field_name",
     "customers.customer_id",
+    "listing_files.customer_resolution",
     "document_work_items.last_error_code",
     "document_work_items.run_id",
 ]
@@ -304,7 +305,8 @@ def test_every_string_column_is_classified() -> None:
             (free_form if column.info.get(FREE_FORM_TEXT_INFO) else structured).add(label)
 
     assert free_form == EXPECTED_FREE_FORM
-    assert len(free_form) + len(structured) == 76
+    # 77 = 76 + listing_files.customer_resolution (structured intake outcome code)
+    assert len(free_form) + len(structured) == 77
     for label in STRUCTURED_SAMPLES:
         assert label in structured, f"{label} must be structured (rejected, not rewritten)"
 

@@ -448,7 +448,18 @@ class ListingFileCreate(BaseModel):
 
 
 class ListingFileCreated(BaseModel):
+    """POST /listing-files response.
+
+    Additive fields: ``customer_id`` is the resolved customer's business
+    key (``CUST-000123``) and ``customer_resolution`` how the seller
+    resolved (EXISTING_CUSTOMER / NEW_CUSTOMER / NEEDS_REVIEW).  Both are
+    null when no seller was supplied or the create was an idempotent
+    replay of a row stored before resolution applied.
+    """
+
     id: int
+    customer_id: Optional[str] = None
+    customer_resolution: Optional[str] = None
 
 
 class RequirementSummary(BaseModel):
@@ -596,6 +607,16 @@ class ReviewQueueProcessingFailed(BaseModel):
     attempt_count: int
 
 
+class ReviewQueueCustomer(BaseModel):
+    """The file's seller is ambiguously resolved (``NEEDS_REVIEW``): no
+    customer was created or linked.  ``seller_name`` is the identity a
+    human must disambiguate; the why lives in the ``CUSTOMER_RESOLUTION``
+    audit event (reason is not persisted on the file)."""
+
+    listing_file_id: int
+    seller_name: Optional[str] = None
+
+
 class ReviewQueue(BaseModel):
     """GET /listing-files/{id}/review-queue -- everything a human must act on.
 
@@ -603,8 +624,9 @@ class ReviewQueue(BaseModel):
     in ``EXCEPTION``, every ``RECEIVED`` requirement (pending verification),
     every ``UNKNOWN`` document, every document no requirement has evidence
     for (with its reason), every ``PENDING`` requirement past the
-    overdue threshold, and every document whose orchestrator retries were
-    exhausted (``processing_failed``).
+    overdue threshold, every document whose orchestrator retries were
+    exhausted (``processing_failed``), and the file itself when its seller
+    could not be resolved unambiguously (``customer_needs_review``).
     """
 
     listing_file_id: int
@@ -614,6 +636,7 @@ class ReviewQueue(BaseModel):
     pending_verification: list[ReviewQueueItem]
     overdue: list[ReviewQueueItem]
     processing_failed: list[ReviewQueueProcessingFailed]
+    customer_needs_review: list[ReviewQueueCustomer] = Field(default_factory=list)
 
 
 class ConflictFinding(BaseModel):

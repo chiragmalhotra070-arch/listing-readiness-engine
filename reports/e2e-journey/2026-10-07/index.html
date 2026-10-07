@@ -1,0 +1,2797 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Listing readiness — e2e journey measurement 2026-10-07</title>
+<style>
+:root { --bg:#f6f7f9; --card:#ffffff; --ink:#1b1f24; --muted:#5b6570; --line:#d9dee3;
+        --ok:#137a3d; --okbg:#e4f5ea; --bad:#b3261e; --badbg:#fbeae9; --warnbg:#fff6e0; --warn:#8a6100; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink);
+       font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+main { max-width:1100px; margin:0 auto; padding:24px 20px 80px; }
+header.top { max-width:1100px; margin:0 auto; padding:28px 20px 6px; }
+h1 { font-size:24px; margin:0 0 4px; }
+h2 { font-size:19px; margin:34px 0 10px; }
+h3 { font-size:16px; margin:22px 0 8px; }
+.sub { color:var(--muted); margin:2px 0; }
+section.card { background:var(--card); border:1px solid var(--line); border-radius:10px;
+               padding:16px 18px; margin:14px 0; }
+table { border-collapse:collapse; width:100%; margin:8px 0; font-size:13.5px; }
+th, td { border:1px solid var(--line); padding:5px 8px; text-align:left; vertical-align:top; }
+th { background:#eef1f4; font-weight:600; }
+pre { background:#0f141a; color:#e6edf3; padding:10px 12px; border-radius:8px; overflow:auto;
+      font:12.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; margin:6px 0; }
+code { font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace; background:#eef1f4; padding:1px 4px; border-radius:4px; }
+.b { display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; font-weight:600; }
+.b-ok { background:var(--okbg); color:var(--ok); }
+.b-bad { background:var(--badbg); color:var(--bad); }
+.b-warn { background:var(--warnbg); color:var(--warn); }
+.b-neutral { background:#eef1f4; color:var(--muted); }
+.call { border-top:1px dashed var(--line); padding:8px 0; }
+.chead { display:flex; flex-wrap:wrap; gap:8px; align-items:baseline; }
+.m { font:600 11px ui-monospace,monospace; background:#e8edf3; border-radius:4px; padding:2px 6px; }
+.m-derived { background:#efe6fb; color:#5b3fa8; }
+.chead .lbl { color:var(--muted); font-size:13px; }
+.chead .ms { color:var(--muted); font-size:12px; }
+details { margin:4px 0; }
+summary { cursor:pointer; color:#35506b; font-size:13px; }
+.k { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-top:6px; }
+.badge-row { display:flex; flex-wrap:wrap; gap:10px; margin:8px 0; }
+.ok { color:var(--ok); font-weight:600; } .bad { color:var(--bad); font-weight:600; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+@media (max-width:800px) { .grid2 { grid-template-columns:1fr; } }
+tr.badrow td { background:var(--badbg); }
+tr.okrow td { background:#f2faf4; }
+.note { background:var(--warnbg); border:1px solid #ead9a6; border-radius:8px; padding:10px 12px;
+        font-size:13.5px; margin:10px 0; }
+.foot { color:var(--muted); font-size:12.5px; margin-top:40px; border-top:1px solid var(--line); padding-top:12px; }
+nav.toc { max-width:1100px; margin:0 auto; padding:0 20px; font-size:13.5px; }
+nav.toc a { color:#35506b; margin-right:14px; text-decoration:none; }
+nav.toc a:hover { text-decoration:underline; }
+.kv-summary td:first-child { width:34%; font-weight:600; }
+</style></head>
+<body>
+<header class="top">
+<h1>Listing readiness — end-to-end journey measurement</h1>
+<p class="sub">Run 2026-10-07 · engine <code>2a32457598</code> ·
+provider mock · prompt v2 ·
+6 fixture documents · Pass A (n8n webhook) + Pass B (stage APIs)</p>
+</header>
+<nav class="toc"><a href="#summary">Summary</a><a href="#meta">Metadata</a><a href="#pass-a">Pass A</a>
+<a href="#stage-1">Stages</a><a href="#rule-check">Rule check</a><a href="#verdict">Verdict</a>
+<a href="#scorecard">Scorecard</a><a href="#findings">Findings</a></nav>
+<main>
+<section class="card" id="summary"><h2>Run summary</h2><table class="kv-summary"><tr><th>Check</th><th>Observed outcome</th></tr><tr><td>Pass A — n8n webhook journey</td><td class='ok'>HTTP 200 in 1754.0 ms; n8n execution(s): #1709 success</td></tr><tr><td>Pass B — documents</td><td class='ok'>listing file #18 (create HTTP 201), 6 uploaded, dedup HTTP 200 same_id=True, sha256 == server content_hash 6/6</td></tr><tr><td>Requirements generated</td><td class='ok'>12 of 12 CA catalog rules fired</td></tr><tr><td>Reconcile</td><td class='ok'>evidence_created=6, moved_to_received=6, unmet=6, unmatched=0</td></tr><tr><td>Verdict BEFORE verification</td><td class='bad'>NOT_READY — Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory. Advisory — recommended pending: prelim_title_report.</td></tr><tr><td>Verdict AFTER verification</td><td class='bad'>NOT_READY — Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory.</td></tr><tr><td>Detect exceptions</td><td class='ok'>conflicts=0, missing_signatures=0, overdue=0, exceptions_raised=0</td></tr><tr><td>Layer 1 — text fidelity vs PDF text layer</td><td class='ok'>331/331 checks passed (recall 328/328, failed negative assertions 0)</td></tr><tr><td>Layer 2 — extracted_data vs generator ground truth</td><td class='ok'>55/55 expected fields matched (missing 0, mismatched 0, fabricated 0, extra 0); recall 55/55</td></tr><tr><td>Normalize — normalized_data vs expected canonical forms</td><td class='ok'>30/30 shared-fact cells agree (extra 0)</td></tr></table></section>
+
+<section class="card" id="meta">
+<h2>Run metadata</h2>
+<table class="kv-summary">
+<tr><td>Run timestamp (UTC)</td><td>2026-10-07T14:06:23+00:00</td></tr>
+<tr><td>Engine commit (HEAD at run time)</td><td><code>2a32457598b8677b1a1cfefed22e1694af2bda11</code></td></tr>
+<tr><td>LLM provider / model / prompt version</td><td>mock / gpt-6-luna / v2
+ <span class="b b-neutral">source: docker exec unix:///Users/chiragmalhotra/Library/Containers/com.docker.docker/Data/docker.raw.sock ... get_settings()</span></td></tr>
+<tr><td>API base</td><td><code>http://127.0.0.1:8011/v1</code></td></tr>
+<tr><td>Webhook</td><td><code>http://127.0.0.1:5678/webhook/listing-readiness/v1</code></td></tr>
+<tr><td>Idempotency keys</td><td>Pass A <code>e2e-journey-2026-10-07-passA</code>,
+ Pass B <code>e2e-journey-2026-10-07-passB-attempt2</code></td></tr>
+<tr><td>Ground-truth checks</td><td>331 Layer-1 assertions across 6 documents</td></tr>
+</table>
+<div class="note">Working tree had uncommitted changes at run time (this report was being authored): <code>?? reports/</code></div>
+<h3>Fixtures</h3>
+<table><tr><th>File</th><th>Bytes</th><th>Pages</th><th>sha256 (local)</th></tr><tr><td>demo-ca-tds.pdf</td><td>9914 B</td><td>3</td><td><code>35a6383a6ce50f7c…</code></td></tr><tr><td>demo-ca-spq.pdf</td><td>10186 B</td><td>4</td><td><code>df1e6f2f27c43149…</code></td></tr><tr><td>demo-listing-agreement.pdf</td><td>14801 B</td><td>7</td><td><code>197711c62a354e6d…</code></td></tr><tr><td>demo-agent-visual-inspection.pdf</td><td>7298 B</td><td>3</td><td><code>051063a17782a31c…</code></td></tr><tr><td>demo-ca-nhd.pdf</td><td>9001 B</td><td>4</td><td><code>4291f3ed95ff863a…</code></td></tr><tr><td>demo-prelim-title-report.pdf</td><td>16128 B</td><td>9</td><td><code>bd5c63bb67f4f863…</code></td></tr></table>
+</section>
+
+<section class="card" id="pass-a">
+<h2>Pass A — n8n webhook journey (orchestrated end-to-end)</h2>
+<p class="sub">One webhook call drives create &rarr; generate &rarr; upload &rarr; classify &rarr; extract
+&rarr; reconcile &rarr; detect-exceptions &rarr; verdict &rarr; readout inside n8n (workflow
+<code>54mDZXfkhnuJPhlY</code>), then returns the final readout as the response body.</p>
+<table class="kv-summary">
+<tr><td>Webhook response</td><td><span class="b b-ok">200</span> in 1754.0 ms</td></tr>
+<tr><td>Readout verdict inside webhook response</td><td><span class="b b-bad">NOT_READY</span> Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory. Advisory — recommended pending: prelim_title_report.</td></tr>
+</table>
+<h3>n8n execution (sqlite probe, before/after diff)</h3>
+<table><tr><th>Execution id</th><th>Status</th><th>Started</th><th>Stopped</th></tr><tr><td>#1709</td><td>success</td><td>2026-10-07 14:06:23.791</td><td>2026-10-07 14:06:25.288</td></tr></table>
+<details><summary>docker probe log</summary><pre>[]</pre></details>
+<h3>Captured calls</h3>
+<div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:5678/webhook/listing-readiness/v1</span>
+<span class="b b-ok">200</span>
+<span class="ms">1754.0 ms</span>
+<span class="lbl">POST webhook listing-readiness/v1 (full journey: create -&gt; upload -&gt; classify -&gt; extract -&gt; reconcile -&gt; detect -&gt; verdict -&gt; readout)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;property_address&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+  &quot;apn&quot;: &quot;5842-018-024&quot;,
+  &quot;seller_name&quot;: &quot;Jane Seller&quot;,
+  &quot;property_attributes&quot;: {
+    &quot;state&quot;: &quot;CA&quot;,
+    &quot;year_built&quot;: 1968,
+    &quot;property_type&quot;: &quot;single_family&quot;,
+    &quot;hoa&quot;: true,
+    &quot;solar&quot;: true,
+    &quot;septic&quot;: false,
+    &quot;seller_type&quot;: &quot;individual&quot;
+  },
+  &quot;idempotency_key&quot;: &quot;e2e-journey-2026-10-07-passA&quot;,
+  &quot;documents&quot;: [
+    {
+      &quot;filename&quot;: &quot;demo-ca-tds.pdf&quot;,
+      &quot;bytes&quot;: 9914,
+      &quot;sha256&quot;: &quot;35a6383a6ce50f7c12559ba99f79f1e01d3fe01aa02059afc9b444158f77eb3b&quot;,
+      &quot;base64_chars&quot;: 13220
+    },
+    {
+      &quot;filename&quot;: &quot;demo-ca-spq.pdf&quot;,
+      &quot;bytes&quot;: 10186,
+      &quot;sha256&quot;: &quot;df1e6f2f27c43149db4e5180be85b60c8f71e231c492cebde98853854953a80d&quot;,
+      &quot;base64_chars&quot;: 13584
+    },
+    {
+      &quot;filename&quot;: &quot;demo-listing-agreement.pdf&quot;,
+      &quot;bytes&quot;: 14801,
+      &quot;sha256&quot;: &quot;197711c62a354e6db0b4b50f57ed240d1ba3ad6d064dddd75db2947cf19f61a7&quot;,
+      &quot;base64_chars&quot;: 19736
+    },
+    {
+      &quot;filename&quot;: &quot;demo-agent-visual-inspection.pdf&quot;,
+      &quot;bytes&quot;: 7298,
+      &quot;sha256&quot;: &quot;051063a17782a31c44284b61a4af0a57a5587bcf77471859116b89bfb034e070&quot;,
+      &quot;base64_chars&quot;: 9732
+    },
+    {
+      &quot;filename&quot;: &quot;demo-ca-nhd.pdf&quot;,
+      &quot;bytes&quot;: 9001,
+      &quot;sha256&quot;: &quot;4291f3ed95ff863a1f8132d0046eb26deee4822efa800b2692136bc2e500eab5&quot;,
+      &quot;base64_chars&quot;: 12004
+    },
+    {
+      &quot;filename&quot;: &quot;demo-prelim-title-report.pdf&quot;,
+      &quot;bytes&quot;: 16128,
+      &quot;sha256&quot;: &quot;bd5c63bb67f4f8633bdce62cd8f7803041d8ba897575461f50f719bc6394b073&quot;,
+      &quot;base64_chars&quot;: 21504
+    }
+  ]
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;notification&quot;: {
+    &quot;target&quot;: &quot;webhook_response&quot;
+  },
+  &quot;readout&quot;: {
+    &quot;id&quot;: 16,
+    &quot;property_address&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+    &quot;apn&quot;: &quot;5842-018-024&quot;,
+    &quot;seller_name&quot;: &quot;Jane Seller&quot;,
+    &quot;property_attributes&quot;: {
+      &quot;hoa&quot;: true,
+      &quot;solar&quot;: true,
+      &quot;state&quot;: &quot;CA&quot;,
+      &quot;septic&quot;: false,
+      &quot;year_built&quot;: 1968,
+      &quot;seller_type&quot;: &quot;individual&quot;,
+      &quot;property_type&quot;: &quot;single_family&quot;
+    },
+    &quot;verdict&quot;: &quot;NOT_READY&quot;,
+    &quot;reason&quot;: &quot;Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory. Advisory — recommended pending: prelim_title_report.&quot;,
+    &quot;readiness_assessed_at&quot;: &quot;2026-10-07T14:06:24.597895Z&quot;,
+    &quot;requirements&quot;: [
+      {
+        &quot;requirement_key&quot;: &quot;agency_disclosure&quot;,
+        &quot;requirement_type&quot;: &quot;CORE&quot;,
+        &quot;status&quot;: &quot;REQUIRED&quot;,
+        &quot;state&quot;: &quot;PENDING&quot;,
+        &quot;overdue&quot;: false
+      },
+      {
+        &quot;requirement_key&quot;: &quot;agent_visual_inspection&quot;,
+        &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+        &quot;status&quot;: &quot;REQUIRED&quot;,
+        &quot;state&quot;: &quot;RECEIVED&quot;,
+        &quot;overdue&quot;: false
+      },
+      {
+        &quot;requirement_key&quot;: &quot;ca_nhd&quot;,
+        &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+        &quot;status&quot;: &quot;REQUIRED&quot;,
+        &quot;state&quot;: &quot;RECEIVED&quot;,
+        &quot;overdue&quot;: false
+      },
+      {
+        &quot;requirement_key&quot;: &quot;ca_spq&quot;,
+        &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+        &quot;status&quot;: &quot;REQUIRED&quot;,
+        &quot;state&quot;: &quot;RECEIVED&quot;,
+        &quot;overdue&quot;: false
+      },
+      {
+        &quot;requirement_key&quot;: &quot;ca_tds&quot;,
+        &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+        &quot;status&quot;: &quot;REQUIRED&quot;,
+        &quot;state&quot;: &quot;RECEIVED&quot;,
+        &quot;overdue&quot;: false
+      },
+      {
+        &quot;requirement_key&quot;: &quot;hoa_package&quot;,
+        &quot;requirement_type&quot;: &quot;PROPERTY_CONDITIONAL&quot;,
+        &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+        &quot;state&quot;: &quot;PENDING&quot;,
+        &quot;overdue&quot;: false
+      },
+      {
+        &quot;requirement_key&quot;: &quot;lead_disclosure&quot;,
+        &quot;requirement_type&quot;: &quot;FEDERAL&quot;,
+        &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+        &quot;state&quot;: &quot;PENDING&quot;,
+        &quot;overdue&quot;: false
+      },
+      {
+        &quot;requirement_key&quot;: &quot;listing_agreement&quot;,
+        &quot;requirement_type&quot;: &quot;CORE&quot;,
+        &quot;status&quot;: &quot;REQUIRED&quot;,
+        &quot;state&quot;: &quot;RECEIVED&quot;,
+        &quot;overdue&quot;: false
+      },
+      {
+        &quot;requirement_key&quot;: &quot;prelim_title_report&quot;,
+        &quot;requirement_type&quot;: &quot;BROKERAGE&quot;,
+        &quot;status&quot;: &quot;RECOMMENDED&quot;,
+        &quot;state&quot;: &quot;RECEIVED&quot;,
+        &quot;overdue&quot;: false
+      },
+      {
+        &quot;requirement_key&quot;: &quot;seller_advisory&quot;,
+        &quot;requirement_type&quot;: &quot;CORE&quot;,
+        &quot;status&quot;: &quot;REQUIRED&quot;,
+        &quot;state&quot;: &quot;PENDING&quot;,
+        &quot;overdue&quot;: false
+      },
+      {
+        &quot;requirement_key&quot;: &quot;solar_agreement&quot;,
+        &quot;requirement_type&quot;: &quot;PROPERTY_CONDITIONAL&quot;,
+        &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+        &quot;state&quot;: &quot;PENDING&quot;,
+        &quot;overdue&quot;: false
+      },
+      {
+        &quot;requirement_key&quot;: &quot;wcmd_advisory&quot;,
+        &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+        &quot;status&quot;: &quot;REQUIRED&quot;,
+        &quot;state&quot;: &quot;PENDING&quot;,
+        &quot;overdue&quot;: false
+      }
+    ],
+    &quot;unmatched_document_ids&quot;: []
+  }
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">GET</span>
+<span>http://127.0.0.1:8011/v1/listing-files/16/review-queue</span>
+<span class="b b-ok">200</span>
+<span class="ms">62.2 ms</span>
+<span class="lbl">GET review-queue (state at webhook completion)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;listing_file_id&quot;: 16,
+  &quot;exceptions&quot;: [],
+  &quot;unknown_documents&quot;: [],
+  &quot;unmatched_documents&quot;: [],
+  &quot;pending_verification&quot;: [
+    {
+      &quot;requirement_id&quot;: 138,
+      &quot;requirement_key&quot;: &quot;agent_visual_inspection&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #90 (AGENT_VISUAL_INSPECTION)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 139,
+      &quot;requirement_key&quot;: &quot;ca_nhd&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #91 (CA_NHD)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 137,
+      &quot;requirement_key&quot;: &quot;ca_spq&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #88 (CA_SPQ)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 136,
+      &quot;requirement_key&quot;: &quot;ca_tds&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #87 (CA_TDS)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 133,
+      &quot;requirement_key&quot;: &quot;listing_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #89 (LISTING_AGREEMENT)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 144,
+      &quot;requirement_key&quot;: &quot;prelim_title_report&quot;,
+      &quot;requirement_type&quot;: &quot;BROKERAGE&quot;,
+      &quot;status&quot;: &quot;RECOMMENDED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #92 (PRELIM_TITLE_REPORT)&quot;
+    }
+  ],
+  &quot;overdue&quot;: [],
+  &quot;processing_failed&quot;: []
+}</pre>
+</details></div>
+<h3>Readout returned by the webhook</h3>
+<pre>{
+  &quot;id&quot;: 16,
+  &quot;property_address&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+  &quot;apn&quot;: &quot;5842-018-024&quot;,
+  &quot;seller_name&quot;: &quot;Jane Seller&quot;,
+  &quot;property_attributes&quot;: {
+    &quot;hoa&quot;: true,
+    &quot;solar&quot;: true,
+    &quot;state&quot;: &quot;CA&quot;,
+    &quot;septic&quot;: false,
+    &quot;year_built&quot;: 1968,
+    &quot;seller_type&quot;: &quot;individual&quot;,
+    &quot;property_type&quot;: &quot;single_family&quot;
+  },
+  &quot;verdict&quot;: &quot;NOT_READY&quot;,
+  &quot;reason&quot;: &quot;Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory. Advisory — recommended pending: prelim_title_report.&quot;,
+  &quot;readiness_assessed_at&quot;: &quot;2026-10-07T14:06:24.597895Z&quot;,
+  &quot;requirements&quot;: [
+    {
+      &quot;requirement_key&quot;: &quot;agency_disclosure&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;agent_visual_inspection&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_nhd&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_spq&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_tds&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;hoa_package&quot;,
+      &quot;requirement_type&quot;: &quot;PROPERTY_CONDITIONAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;lead_disclosure&quot;,
+      &quot;requirement_type&quot;: &quot;FEDERAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;listing_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;prelim_title_report&quot;,
+      &quot;requirement_type&quot;: &quot;BROKERAGE&quot;,
+      &quot;status&quot;: &quot;RECOMMENDED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;seller_advisory&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;solar_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;PROPERTY_CONDITIONAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;wcmd_advisory&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    }
+  ],
+  &quot;unmatched_document_ids&quot;: []
+}</pre>
+<h3>Review queue at webhook completion</h3>
+<pre>{
+  &quot;listing_file_id&quot;: 16,
+  &quot;exceptions&quot;: [],
+  &quot;unknown_documents&quot;: [],
+  &quot;unmatched_documents&quot;: [],
+  &quot;pending_verification&quot;: [
+    {
+      &quot;requirement_id&quot;: 138,
+      &quot;requirement_key&quot;: &quot;agent_visual_inspection&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #90 (AGENT_VISUAL_INSPECTION)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 139,
+      &quot;requirement_key&quot;: &quot;ca_nhd&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #91 (CA_NHD)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 137,
+      &quot;requirement_key&quot;: &quot;ca_spq&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #88 (CA_SPQ)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 136,
+      &quot;requirement_key&quot;: &quot;ca_tds&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #87 (CA_TDS)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 133,
+      &quot;requirement_key&quot;: &quot;listing_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #89 (LISTING_AGREEMENT)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 144,
+      &quot;requirement_key&quot;: &quot;prelim_title_report&quot;,
+      &quot;requirement_type&quot;: &quot;BROKERAGE&quot;,
+      &quot;status&quot;: &quot;RECOMMENDED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #92 (PRELIM_TITLE_REPORT)&quot;
+    }
+  ],
+  &quot;overdue&quot;: [],
+  &quot;processing_failed&quot;: []
+}</pre>
+</section>
+<h2 id="stages">Pass B — measured stage-API run</h2>
+<p class="sub">Each stage records the request body, response body and wall-clock duration of every API call.</p>
+<section class="card" id="stage-1"><h3>Stage 1 — Intake — create file, generate requirements, upload documents</h3><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/listing-files</span>
+<span class="b b-ok">201</span>
+<span class="ms">18.2 ms</span>
+<span class="lbl">POST /listing-files (create)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;property_address&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+  &quot;apn&quot;: &quot;5842-018-024&quot;,
+  &quot;seller_name&quot;: &quot;Jane Seller&quot;,
+  &quot;property_attributes&quot;: {
+    &quot;state&quot;: &quot;CA&quot;,
+    &quot;year_built&quot;: 1968,
+    &quot;property_type&quot;: &quot;single_family&quot;,
+    &quot;hoa&quot;: true,
+    &quot;solar&quot;: true,
+    &quot;septic&quot;: false,
+    &quot;seller_type&quot;: &quot;individual&quot;
+  },
+  &quot;idempotency_key&quot;: &quot;e2e-journey-2026-10-07-passB-attempt2&quot;
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;id&quot;: 18
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/generate-requirements</span>
+<span class="b b-ok">200</span>
+<span class="ms">23.7 ms</span>
+<span class="lbl">POST generate-requirements (catalog triggers -&gt; requirement list)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;requirements&quot;: [
+    {
+      &quot;requirement_key&quot;: &quot;listing_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;seller_advisory&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;agency_disclosure&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_tds&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_spq&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;agent_visual_inspection&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_nhd&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;wcmd_advisory&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;lead_disclosure&quot;,
+      &quot;requirement_type&quot;: &quot;FEDERAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;hoa_package&quot;,
+      &quot;requirement_type&quot;: &quot;PROPERTY_CONDITIONAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;solar_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;PROPERTY_CONDITIONAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;prelim_title_report&quot;,
+      &quot;requirement_type&quot;: &quot;BROKERAGE&quot;,
+      &quot;status&quot;: &quot;RECOMMENDED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;
+    }
+  ]
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">GET</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18</span>
+<span class="b b-ok">200</span>
+<span class="ms">6.0 ms</span>
+<span class="lbl">GET readout (post-generation snapshot)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;id&quot;: 18,
+  &quot;property_address&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+  &quot;apn&quot;: &quot;5842-018-024&quot;,
+  &quot;seller_name&quot;: &quot;Jane Seller&quot;,
+  &quot;property_attributes&quot;: {
+    &quot;hoa&quot;: true,
+    &quot;solar&quot;: true,
+    &quot;state&quot;: &quot;CA&quot;,
+    &quot;septic&quot;: false,
+    &quot;year_built&quot;: 1968,
+    &quot;seller_type&quot;: &quot;individual&quot;,
+    &quot;property_type&quot;: &quot;single_family&quot;
+  },
+  &quot;verdict&quot;: null,
+  &quot;reason&quot;: null,
+  &quot;readiness_assessed_at&quot;: null,
+  &quot;requirements&quot;: [
+    {
+      &quot;requirement_key&quot;: &quot;agency_disclosure&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;agent_visual_inspection&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_nhd&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_spq&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_tds&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;hoa_package&quot;,
+      &quot;requirement_type&quot;: &quot;PROPERTY_CONDITIONAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;lead_disclosure&quot;,
+      &quot;requirement_type&quot;: &quot;FEDERAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;listing_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;prelim_title_report&quot;,
+      &quot;requirement_type&quot;: &quot;BROKERAGE&quot;,
+      &quot;status&quot;: &quot;RECOMMENDED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;seller_advisory&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;solar_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;PROPERTY_CONDITIONAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;wcmd_advisory&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    }
+  ],
+  &quot;unmatched_document_ids&quot;: []
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/documents</span>
+<span class="b b-ok">201</span>
+<span class="ms">29.7 ms</span>
+<span class="lbl">POST documents (upload demo-ca-tds.pdf)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;filename&quot;: &quot;demo-ca-tds.pdf&quot;,
+  &quot;bytes&quot;: 9914,
+  &quot;sha256&quot;: &quot;35a6383a6ce50f7c12559ba99f79f1e01d3fe01aa02059afc9b444158f77eb3b&quot;
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 99
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">GET</span>
+<span>http://127.0.0.1:8011/v1/documents/99</span>
+<span class="b b-ok">200</span>
+<span class="ms">11.6 ms</span>
+<span class="lbl">GET /documents/99 (record: content_hash, evidence)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;id&quot;: 99,
+  &quot;document_name&quot;: &quot;demo-ca-tds.pdf&quot;,
+  &quot;decision&quot;: null,
+  &quot;decision_reason&quot;: null,
+  &quot;processing_status&quot;: &quot;PENDING&quot;,
+  &quot;retryable&quot;: null,
+  &quot;failure_type&quot;: null,
+  &quot;evidence&quot;: null,
+  &quot;current_stage&quot;: &quot;CLASSIFICATION&quot;,
+  &quot;stage_status&quot;: &quot;PENDING&quot;,
+  &quot;overall_status&quot;: &quot;PENDING&quot;,
+  &quot;next_attempt_at&quot;: null,
+  &quot;attempt_count&quot;: 0,
+  &quot;retry_allowed&quot;: false,
+  &quot;document_id&quot;: 99,
+  &quot;source_email_id&quot;: null,
+  &quot;correlation_id&quot;: null,
+  &quot;n8n_execution_id&quot;: null,
+  &quot;business_document_type&quot;: &quot;UNKNOWN&quot;,
+  &quot;business_reference&quot;: null,
+  &quot;duplicate&quot;: false,
+  &quot;customer_id&quot;: null,
+  &quot;customer_type&quot;: null,
+  &quot;processing_attempt_id&quot;: null,
+  &quot;storage_reference&quot;: &quot;local://documents/35/a6/35a6383a6ce50f7c12559ba99f79f1e01d3fe01aa02059afc9b444158f77eb3b&quot;,
+  &quot;content_hash&quot;: &quot;35a6383a6ce50f7c12559ba99f79f1e01d3fe01aa02059afc9b444158f77eb3b&quot;,
+  &quot;file_size_bytes&quot;: 9914,
+  &quot;source_attachment_id&quot;: null
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/documents</span>
+<span class="b b-ok">201</span>
+<span class="ms">22.6 ms</span>
+<span class="lbl">POST documents (upload demo-ca-spq.pdf)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;filename&quot;: &quot;demo-ca-spq.pdf&quot;,
+  &quot;bytes&quot;: 10186,
+  &quot;sha256&quot;: &quot;df1e6f2f27c43149db4e5180be85b60c8f71e231c492cebde98853854953a80d&quot;
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 100
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">GET</span>
+<span>http://127.0.0.1:8011/v1/documents/100</span>
+<span class="b b-ok">200</span>
+<span class="ms">13.8 ms</span>
+<span class="lbl">GET /documents/100 (record: content_hash, evidence)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;id&quot;: 100,
+  &quot;document_name&quot;: &quot;demo-ca-spq.pdf&quot;,
+  &quot;decision&quot;: null,
+  &quot;decision_reason&quot;: null,
+  &quot;processing_status&quot;: &quot;PENDING&quot;,
+  &quot;retryable&quot;: null,
+  &quot;failure_type&quot;: null,
+  &quot;evidence&quot;: null,
+  &quot;current_stage&quot;: &quot;CLASSIFICATION&quot;,
+  &quot;stage_status&quot;: &quot;PENDING&quot;,
+  &quot;overall_status&quot;: &quot;PENDING&quot;,
+  &quot;next_attempt_at&quot;: null,
+  &quot;attempt_count&quot;: 0,
+  &quot;retry_allowed&quot;: false,
+  &quot;document_id&quot;: 100,
+  &quot;source_email_id&quot;: null,
+  &quot;correlation_id&quot;: null,
+  &quot;n8n_execution_id&quot;: null,
+  &quot;business_document_type&quot;: &quot;UNKNOWN&quot;,
+  &quot;business_reference&quot;: null,
+  &quot;duplicate&quot;: false,
+  &quot;customer_id&quot;: null,
+  &quot;customer_type&quot;: null,
+  &quot;processing_attempt_id&quot;: null,
+  &quot;storage_reference&quot;: &quot;local://documents/df/1e/df1e6f2f27c43149db4e5180be85b60c8f71e231c492cebde98853854953a80d&quot;,
+  &quot;content_hash&quot;: &quot;df1e6f2f27c43149db4e5180be85b60c8f71e231c492cebde98853854953a80d&quot;,
+  &quot;file_size_bytes&quot;: 10186,
+  &quot;source_attachment_id&quot;: null
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/documents</span>
+<span class="b b-ok">201</span>
+<span class="ms">17.8 ms</span>
+<span class="lbl">POST documents (upload demo-listing-agreement.pdf)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;filename&quot;: &quot;demo-listing-agreement.pdf&quot;,
+  &quot;bytes&quot;: 14801,
+  &quot;sha256&quot;: &quot;197711c62a354e6db0b4b50f57ed240d1ba3ad6d064dddd75db2947cf19f61a7&quot;
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 101
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">GET</span>
+<span>http://127.0.0.1:8011/v1/documents/101</span>
+<span class="b b-ok">200</span>
+<span class="ms">4.9 ms</span>
+<span class="lbl">GET /documents/101 (record: content_hash, evidence)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;id&quot;: 101,
+  &quot;document_name&quot;: &quot;demo-listing-agreement.pdf&quot;,
+  &quot;decision&quot;: null,
+  &quot;decision_reason&quot;: null,
+  &quot;processing_status&quot;: &quot;PENDING&quot;,
+  &quot;retryable&quot;: null,
+  &quot;failure_type&quot;: null,
+  &quot;evidence&quot;: null,
+  &quot;current_stage&quot;: &quot;CLASSIFICATION&quot;,
+  &quot;stage_status&quot;: &quot;PENDING&quot;,
+  &quot;overall_status&quot;: &quot;PENDING&quot;,
+  &quot;next_attempt_at&quot;: null,
+  &quot;attempt_count&quot;: 0,
+  &quot;retry_allowed&quot;: false,
+  &quot;document_id&quot;: 101,
+  &quot;source_email_id&quot;: null,
+  &quot;correlation_id&quot;: null,
+  &quot;n8n_execution_id&quot;: null,
+  &quot;business_document_type&quot;: &quot;UNKNOWN&quot;,
+  &quot;business_reference&quot;: null,
+  &quot;duplicate&quot;: false,
+  &quot;customer_id&quot;: null,
+  &quot;customer_type&quot;: null,
+  &quot;processing_attempt_id&quot;: null,
+  &quot;storage_reference&quot;: &quot;local://documents/19/77/197711c62a354e6db0b4b50f57ed240d1ba3ad6d064dddd75db2947cf19f61a7&quot;,
+  &quot;content_hash&quot;: &quot;197711c62a354e6db0b4b50f57ed240d1ba3ad6d064dddd75db2947cf19f61a7&quot;,
+  &quot;file_size_bytes&quot;: 14801,
+  &quot;source_attachment_id&quot;: null
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/documents</span>
+<span class="b b-ok">201</span>
+<span class="ms">6.7 ms</span>
+<span class="lbl">POST documents (upload demo-agent-visual-inspection.pdf)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;filename&quot;: &quot;demo-agent-visual-inspection.pdf&quot;,
+  &quot;bytes&quot;: 7298,
+  &quot;sha256&quot;: &quot;051063a17782a31c44284b61a4af0a57a5587bcf77471859116b89bfb034e070&quot;
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 102
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">GET</span>
+<span>http://127.0.0.1:8011/v1/documents/102</span>
+<span class="b b-ok">200</span>
+<span class="ms">8.3 ms</span>
+<span class="lbl">GET /documents/102 (record: content_hash, evidence)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;id&quot;: 102,
+  &quot;document_name&quot;: &quot;demo-agent-visual-inspection.pdf&quot;,
+  &quot;decision&quot;: null,
+  &quot;decision_reason&quot;: null,
+  &quot;processing_status&quot;: &quot;PENDING&quot;,
+  &quot;retryable&quot;: null,
+  &quot;failure_type&quot;: null,
+  &quot;evidence&quot;: null,
+  &quot;current_stage&quot;: &quot;CLASSIFICATION&quot;,
+  &quot;stage_status&quot;: &quot;PENDING&quot;,
+  &quot;overall_status&quot;: &quot;PENDING&quot;,
+  &quot;next_attempt_at&quot;: null,
+  &quot;attempt_count&quot;: 0,
+  &quot;retry_allowed&quot;: false,
+  &quot;document_id&quot;: 102,
+  &quot;source_email_id&quot;: null,
+  &quot;correlation_id&quot;: null,
+  &quot;n8n_execution_id&quot;: null,
+  &quot;business_document_type&quot;: &quot;UNKNOWN&quot;,
+  &quot;business_reference&quot;: null,
+  &quot;duplicate&quot;: false,
+  &quot;customer_id&quot;: null,
+  &quot;customer_type&quot;: null,
+  &quot;processing_attempt_id&quot;: null,
+  &quot;storage_reference&quot;: &quot;local://documents/05/10/051063a17782a31c44284b61a4af0a57a5587bcf77471859116b89bfb034e070&quot;,
+  &quot;content_hash&quot;: &quot;051063a17782a31c44284b61a4af0a57a5587bcf77471859116b89bfb034e070&quot;,
+  &quot;file_size_bytes&quot;: 7298,
+  &quot;source_attachment_id&quot;: null
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/documents</span>
+<span class="b b-ok">201</span>
+<span class="ms">6.0 ms</span>
+<span class="lbl">POST documents (upload demo-ca-nhd.pdf)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;filename&quot;: &quot;demo-ca-nhd.pdf&quot;,
+  &quot;bytes&quot;: 9001,
+  &quot;sha256&quot;: &quot;4291f3ed95ff863a1f8132d0046eb26deee4822efa800b2692136bc2e500eab5&quot;
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 103
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">GET</span>
+<span>http://127.0.0.1:8011/v1/documents/103</span>
+<span class="b b-ok">200</span>
+<span class="ms">3.5 ms</span>
+<span class="lbl">GET /documents/103 (record: content_hash, evidence)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;id&quot;: 103,
+  &quot;document_name&quot;: &quot;demo-ca-nhd.pdf&quot;,
+  &quot;decision&quot;: null,
+  &quot;decision_reason&quot;: null,
+  &quot;processing_status&quot;: &quot;PENDING&quot;,
+  &quot;retryable&quot;: null,
+  &quot;failure_type&quot;: null,
+  &quot;evidence&quot;: null,
+  &quot;current_stage&quot;: &quot;CLASSIFICATION&quot;,
+  &quot;stage_status&quot;: &quot;PENDING&quot;,
+  &quot;overall_status&quot;: &quot;PENDING&quot;,
+  &quot;next_attempt_at&quot;: null,
+  &quot;attempt_count&quot;: 0,
+  &quot;retry_allowed&quot;: false,
+  &quot;document_id&quot;: 103,
+  &quot;source_email_id&quot;: null,
+  &quot;correlation_id&quot;: null,
+  &quot;n8n_execution_id&quot;: null,
+  &quot;business_document_type&quot;: &quot;UNKNOWN&quot;,
+  &quot;business_reference&quot;: null,
+  &quot;duplicate&quot;: false,
+  &quot;customer_id&quot;: null,
+  &quot;customer_type&quot;: null,
+  &quot;processing_attempt_id&quot;: null,
+  &quot;storage_reference&quot;: &quot;local://documents/42/91/4291f3ed95ff863a1f8132d0046eb26deee4822efa800b2692136bc2e500eab5&quot;,
+  &quot;content_hash&quot;: &quot;4291f3ed95ff863a1f8132d0046eb26deee4822efa800b2692136bc2e500eab5&quot;,
+  &quot;file_size_bytes&quot;: 9001,
+  &quot;source_attachment_id&quot;: null
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/documents</span>
+<span class="b b-ok">201</span>
+<span class="ms">6.5 ms</span>
+<span class="lbl">POST documents (upload demo-prelim-title-report.pdf)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;filename&quot;: &quot;demo-prelim-title-report.pdf&quot;,
+  &quot;bytes&quot;: 16128,
+  &quot;sha256&quot;: &quot;bd5c63bb67f4f8633bdce62cd8f7803041d8ba897575461f50f719bc6394b073&quot;
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 104
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">GET</span>
+<span>http://127.0.0.1:8011/v1/documents/104</span>
+<span class="b b-ok">200</span>
+<span class="ms">2.5 ms</span>
+<span class="lbl">GET /documents/104 (record: content_hash, evidence)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;id&quot;: 104,
+  &quot;document_name&quot;: &quot;demo-prelim-title-report.pdf&quot;,
+  &quot;decision&quot;: null,
+  &quot;decision_reason&quot;: null,
+  &quot;processing_status&quot;: &quot;PENDING&quot;,
+  &quot;retryable&quot;: null,
+  &quot;failure_type&quot;: null,
+  &quot;evidence&quot;: null,
+  &quot;current_stage&quot;: &quot;CLASSIFICATION&quot;,
+  &quot;stage_status&quot;: &quot;PENDING&quot;,
+  &quot;overall_status&quot;: &quot;PENDING&quot;,
+  &quot;next_attempt_at&quot;: null,
+  &quot;attempt_count&quot;: 0,
+  &quot;retry_allowed&quot;: false,
+  &quot;document_id&quot;: 104,
+  &quot;source_email_id&quot;: null,
+  &quot;correlation_id&quot;: null,
+  &quot;n8n_execution_id&quot;: null,
+  &quot;business_document_type&quot;: &quot;UNKNOWN&quot;,
+  &quot;business_reference&quot;: null,
+  &quot;duplicate&quot;: false,
+  &quot;customer_id&quot;: null,
+  &quot;customer_type&quot;: null,
+  &quot;processing_attempt_id&quot;: null,
+  &quot;storage_reference&quot;: &quot;local://documents/bd/5c/bd5c63bb67f4f8633bdce62cd8f7803041d8ba897575461f50f719bc6394b073&quot;,
+  &quot;content_hash&quot;: &quot;bd5c63bb67f4f8633bdce62cd8f7803041d8ba897575461f50f719bc6394b073&quot;,
+  &quot;file_size_bytes&quot;: 16128,
+  &quot;source_attachment_id&quot;: null
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/documents</span>
+<span class="b b-ok">200</span>
+<span class="ms">3.9 ms</span>
+<span class="lbl">POST documents (dedup re-upload demo-ca-tds.pdf, same bytes -&gt; expect 200 + same id)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;filename&quot;: &quot;demo-ca-tds.pdf&quot;,
+  &quot;bytes&quot;: 9914,
+  &quot;sha256&quot;: &quot;35a6383a6ce50f7c12559ba99f79f1e01d3fe01aa02059afc9b444158f77eb3b&quot;,
+  &quot;expect&quot;: &quot;200, same document_id&quot;
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 99
+}</pre>
+</details></div></section><section class="card" id="stage-2"><h3>Stage 2 — Classify — provider call per document</h3><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/documents/99/classify</span>
+<span class="b b-ok">200</span>
+<span class="ms">111.4 ms</span>
+<span class="lbl">POST classify demo-ca-tds.pdf</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 99,
+  &quot;document_type&quot;: &quot;CA_TDS&quot;,
+  &quot;classification_confidence&quot;: 0.95
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/documents/100/classify</span>
+<span class="b b-ok">200</span>
+<span class="ms">49.1 ms</span>
+<span class="lbl">POST classify demo-ca-spq.pdf</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 100,
+  &quot;document_type&quot;: &quot;CA_SPQ&quot;,
+  &quot;classification_confidence&quot;: 0.95
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/documents/101/classify</span>
+<span class="b b-ok">200</span>
+<span class="ms">38.3 ms</span>
+<span class="lbl">POST classify demo-listing-agreement.pdf</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 101,
+  &quot;document_type&quot;: &quot;LISTING_AGREEMENT&quot;,
+  &quot;classification_confidence&quot;: 0.96
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/documents/102/classify</span>
+<span class="b b-ok">200</span>
+<span class="ms">28.1 ms</span>
+<span class="lbl">POST classify demo-agent-visual-inspection.pdf</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 102,
+  &quot;document_type&quot;: &quot;AGENT_VISUAL_INSPECTION&quot;,
+  &quot;classification_confidence&quot;: 0.94
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/documents/103/classify</span>
+<span class="b b-ok">200</span>
+<span class="ms">25.0 ms</span>
+<span class="lbl">POST classify demo-ca-nhd.pdf</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 103,
+  &quot;document_type&quot;: &quot;CA_NHD&quot;,
+  &quot;classification_confidence&quot;: 0.95
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/documents/104/classify</span>
+<span class="b b-ok">200</span>
+<span class="ms">42.3 ms</span>
+<span class="lbl">POST classify demo-prelim-title-report.pdf</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 104,
+  &quot;document_type&quot;: &quot;PRELIM_TITLE_REPORT&quot;,
+  &quot;classification_confidence&quot;: 0.94
+}</pre>
+</details></div></section><section class="card" id="stage-3"><h3>Stage 3 — Extract — per-document field sets (extracted_data + normalized_data)</h3><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/documents/99/extract</span>
+<span class="b b-ok">200</span>
+<span class="ms">4.1 ms</span>
+<span class="lbl">POST extract demo-ca-tds.pdf</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 99,
+  &quot;document_type&quot;: &quot;CA_TDS&quot;,
+  &quot;extracted_data&quot;: {
+    &quot;apn&quot;: &quot;5842-018-024&quot;,
+    &quot;seller_name&quot;: &quot;Jane Seller&quot;,
+    &quot;document_date&quot;: null,
+    &quot;brokerage_name&quot;: null,
+    &quot;disclosure_date&quot;: &quot;2026-09-16&quot;,
+    &quot;property_address&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+    &quot;disclosure_signed&quot;: true,
+    &quot;listing_agent_name&quot;: null,
+    &quot;signatures_present&quot;: true
+  },
+  &quot;normalized_data&quot;: {
+    &quot;apn&quot;: &quot;5842018024&quot;,
+    &quot;seller_name&quot;: &quot;jane seller&quot;,
+    &quot;property_address&quot;: &quot;123 main st pasadena ca 91101&quot;
+  }
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/documents/100/extract</span>
+<span class="b b-ok">200</span>
+<span class="ms">3.1 ms</span>
+<span class="lbl">POST extract demo-ca-spq.pdf</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 100,
+  &quot;document_type&quot;: &quot;CA_SPQ&quot;,
+  &quot;extracted_data&quot;: {
+    &quot;apn&quot;: &quot;5842-018-024&quot;,
+    &quot;seller_name&quot;: &quot;Jane Seller&quot;,
+    &quot;document_date&quot;: null,
+    &quot;brokerage_name&quot;: null,
+    &quot;completion_date&quot;: &quot;2026-09-16&quot;,
+    &quot;property_address&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+    &quot;listing_agent_name&quot;: null,
+    &quot;signatures_present&quot;: true,
+    &quot;questionnaire_complete&quot;: true
+  },
+  &quot;normalized_data&quot;: {
+    &quot;apn&quot;: &quot;5842018024&quot;,
+    &quot;seller_name&quot;: &quot;jane seller&quot;,
+    &quot;property_address&quot;: &quot;123 main st pasadena ca 91101&quot;
+  }
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/documents/101/extract</span>
+<span class="b b-ok">200</span>
+<span class="ms">3.7 ms</span>
+<span class="lbl">POST extract demo-listing-agreement.pdf</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 101,
+  &quot;document_type&quot;: &quot;LISTING_AGREEMENT&quot;,
+  &quot;extracted_data&quot;: {
+    &quot;apn&quot;: &quot;5842-018-024&quot;,
+    &quot;seller_name&quot;: &quot;Jane Seller&quot;,
+    &quot;document_date&quot;: &quot;2026-09-15&quot;,
+    &quot;listing_price&quot;: 1250000.0,
+    &quot;brokerage_name&quot;: &quot;Demo Realty&quot;,
+    &quot;listing_end_date&quot;: &quot;2027-03-15&quot;,
+    &quot;property_address&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+    &quot;listing_agent_name&quot;: &quot;Alex Agent&quot;,
+    &quot;listing_start_date&quot;: &quot;2026-09-15&quot;,
+    &quot;signatures_present&quot;: true
+  },
+  &quot;normalized_data&quot;: {
+    &quot;apn&quot;: &quot;5842018024&quot;,
+    &quot;seller_name&quot;: &quot;jane seller&quot;,
+    &quot;document_date&quot;: &quot;2026-09-15&quot;,
+    &quot;property_address&quot;: &quot;123 main st pasadena ca 91101&quot;,
+    &quot;listing_agent_name&quot;: &quot;alex agent&quot;
+  }
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/documents/102/extract</span>
+<span class="b b-ok">200</span>
+<span class="ms">6.1 ms</span>
+<span class="lbl">POST extract demo-agent-visual-inspection.pdf</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 102,
+  &quot;document_type&quot;: &quot;AGENT_VISUAL_INSPECTION&quot;,
+  &quot;extracted_data&quot;: {
+    &quot;apn&quot;: &quot;5842-018-024&quot;,
+    &quot;seller_name&quot;: &quot;Jane Seller&quot;,
+    &quot;document_date&quot;: &quot;2026-09-17&quot;,
+    &quot;brokerage_name&quot;: &quot;Demo Realty&quot;,
+    &quot;inspection_date&quot;: &quot;2026-09-17&quot;,
+    &quot;property_address&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+    &quot;listing_agent_name&quot;: &quot;Alex Agent&quot;,
+    &quot;signatures_present&quot;: true,
+    &quot;inspection_complete&quot;: true
+  },
+  &quot;normalized_data&quot;: {
+    &quot;apn&quot;: &quot;5842018024&quot;,
+    &quot;seller_name&quot;: &quot;jane seller&quot;,
+    &quot;document_date&quot;: &quot;2026-09-17&quot;,
+    &quot;property_address&quot;: &quot;123 main st pasadena ca 91101&quot;,
+    &quot;listing_agent_name&quot;: &quot;alex agent&quot;
+  }
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/documents/103/extract</span>
+<span class="b b-ok">200</span>
+<span class="ms">5.0 ms</span>
+<span class="lbl">POST extract demo-ca-nhd.pdf</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 103,
+  &quot;document_type&quot;: &quot;CA_NHD&quot;,
+  &quot;extracted_data&quot;: {
+    &quot;apn&quot;: &quot;5842-018-024&quot;,
+    &quot;report_date&quot;: &quot;2026-09-14&quot;,
+    &quot;seller_name&quot;: &quot;Jane Seller&quot;,
+    &quot;document_date&quot;: null,
+    &quot;brokerage_name&quot;: &quot;Demo Realty&quot;,
+    &quot;property_address&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+    &quot;hazards_disclosed&quot;: true,
+    &quot;listing_agent_name&quot;: &quot;Alex Agent&quot;,
+    &quot;signatures_present&quot;: true
+  },
+  &quot;normalized_data&quot;: {
+    &quot;apn&quot;: &quot;5842018024&quot;,
+    &quot;seller_name&quot;: &quot;jane seller&quot;,
+    &quot;property_address&quot;: &quot;123 main st pasadena ca 91101&quot;,
+    &quot;listing_agent_name&quot;: &quot;alex agent&quot;
+  }
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/documents/104/extract</span>
+<span class="b b-ok">200</span>
+<span class="ms">3.4 ms</span>
+<span class="lbl">POST extract demo-prelim-title-report.pdf</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;document_id&quot;: 104,
+  &quot;document_type&quot;: &quot;PRELIM_TITLE_REPORT&quot;,
+  &quot;extracted_data&quot;: {
+    &quot;apn&quot;: &quot;5842-018-024&quot;,
+    &quot;report_date&quot;: &quot;2026-09-18&quot;,
+    &quot;seller_name&quot;: &quot;Jane Seller&quot;,
+    &quot;document_date&quot;: null,
+    &quot;title_company&quot;: &quot;Demo Title Co&quot;,
+    &quot;brokerage_name&quot;: null,
+    &quot;property_address&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+    &quot;listing_agent_name&quot;: null,
+    &quot;signatures_present&quot;: null
+  },
+  &quot;normalized_data&quot;: {
+    &quot;apn&quot;: &quot;5842018024&quot;,
+    &quot;seller_name&quot;: &quot;jane seller&quot;,
+    &quot;property_address&quot;: &quot;123 main st pasadena ca 91101&quot;
+  }
+}</pre>
+</details></div></section><section class="card" id="stage-4"><h3>Stage 4 — Normalize — shared-fact view (derived from stage-3 responses)</h3><div class="call"><div class="chead">
+<span class="m m-derived">DERIVED</span>
+<span>stage-3 responses x ground_truth.json</span>
+<span class="b b-bad">ERR</span>
+<span class="ms">0.0 ms</span>
+<span class="lbl">derived: extracted_data -&gt; normalized_data vs ground_truth.json (5 shared fact fields x 6 documents)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;fields&quot;: [
+    &quot;property_address&quot;,
+    &quot;apn&quot;,
+    &quot;seller_name&quot;,
+    &quot;listing_agent_name&quot;,
+    &quot;document_date&quot;
+  ],
+  &quot;documents&quot;: [
+    &quot;demo-ca-tds.pdf&quot;,
+    &quot;demo-ca-spq.pdf&quot;,
+    &quot;demo-listing-agreement.pdf&quot;,
+    &quot;demo-agent-visual-inspection.pdf&quot;,
+    &quot;demo-ca-nhd.pdf&quot;,
+    &quot;demo-prelim-title-report.pdf&quot;
+  ]
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;agreed&quot;: 30,
+  &quot;total&quot;: 30,
+  &quot;rows&quot;: [
+    {
+      &quot;document&quot;: &quot;demo-ca-tds.pdf&quot;,
+      &quot;field&quot;: &quot;property_address&quot;,
+      &quot;extracted_raw&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+      &quot;normalized_api&quot;: &quot;123 main st pasadena ca 91101&quot;,
+      &quot;expected_normalized&quot;: &quot;123 main st pasadena ca 91101&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-ca-tds.pdf&quot;,
+      &quot;field&quot;: &quot;apn&quot;,
+      &quot;extracted_raw&quot;: &quot;5842-018-024&quot;,
+      &quot;normalized_api&quot;: &quot;5842018024&quot;,
+      &quot;expected_normalized&quot;: &quot;5842018024&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-ca-tds.pdf&quot;,
+      &quot;field&quot;: &quot;seller_name&quot;,
+      &quot;extracted_raw&quot;: &quot;Jane Seller&quot;,
+      &quot;normalized_api&quot;: &quot;jane seller&quot;,
+      &quot;expected_normalized&quot;: &quot;jane seller&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-ca-tds.pdf&quot;,
+      &quot;field&quot;: &quot;listing_agent_name&quot;,
+      &quot;extracted_raw&quot;: null,
+      &quot;normalized_api&quot;: &quot;(absent)&quot;,
+      &quot;expected_normalized&quot;: &quot;(absent)&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-ca-tds.pdf&quot;,
+      &quot;field&quot;: &quot;document_date&quot;,
+      &quot;extracted_raw&quot;: null,
+      &quot;normalized_api&quot;: &quot;(absent)&quot;,
+      &quot;expected_normalized&quot;: &quot;(absent)&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-ca-spq.pdf&quot;,
+      &quot;field&quot;: &quot;property_address&quot;,
+      &quot;extracted_raw&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+      &quot;normalized_api&quot;: &quot;123 main st pasadena ca 91101&quot;,
+      &quot;expected_normalized&quot;: &quot;123 main st pasadena ca 91101&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-ca-spq.pdf&quot;,
+      &quot;field&quot;: &quot;apn&quot;,
+      &quot;extracted_raw&quot;: &quot;5842-018-024&quot;,
+      &quot;normalized_api&quot;: &quot;5842018024&quot;,
+      &quot;expected_normalized&quot;: &quot;5842018024&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-ca-spq.pdf&quot;,
+      &quot;field&quot;: &quot;seller_name&quot;,
+      &quot;extracted_raw&quot;: &quot;Jane Seller&quot;,
+      &quot;normalized_api&quot;: &quot;jane seller&quot;,
+      &quot;expected_normalized&quot;: &quot;jane seller&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-ca-spq.pdf&quot;,
+      &quot;field&quot;: &quot;listing_agent_name&quot;,
+      &quot;extracted_raw&quot;: null,
+      &quot;normalized_api&quot;: &quot;(absent)&quot;,
+      &quot;expected_normalized&quot;: &quot;(absent)&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-ca-spq.pdf&quot;,
+      &quot;field&quot;: &quot;document_date&quot;,
+      &quot;extracted_raw&quot;: null,
+      &quot;normalized_api&quot;: &quot;(absent)&quot;,
+      &quot;expected_normalized&quot;: &quot;(absent)&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-listing-agreement.pdf&quot;,
+      &quot;field&quot;: &quot;property_address&quot;,
+      &quot;extracted_raw&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+      &quot;normalized_api&quot;: &quot;123 main st pasadena ca 91101&quot;,
+      &quot;expected_normalized&quot;: &quot;123 main st pasadena ca 91101&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-listing-agreement.pdf&quot;,
+      &quot;field&quot;: &quot;apn&quot;,
+      &quot;extracted_raw&quot;: &quot;5842-018-024&quot;,
+      &quot;normalized_api&quot;: &quot;5842018024&quot;,
+      &quot;expected_normalized&quot;: &quot;5842018024&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-listing-agreement.pdf&quot;,
+      &quot;field&quot;: &quot;seller_name&quot;,
+      &quot;extracted_raw&quot;: &quot;Jane Seller&quot;,
+      &quot;normalized_api&quot;: &quot;jane seller&quot;,
+      &quot;expected_normalized&quot;: &quot;jane seller&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-listing-agreement.pdf&quot;,
+      &quot;field&quot;: &quot;listing_agent_name&quot;,
+      &quot;extracted_raw&quot;: &quot;Alex Agent&quot;,
+      &quot;normalized_api&quot;: &quot;alex agent&quot;,
+      &quot;expected_normalized&quot;: &quot;alex agent&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-listing-agreement.pdf&quot;,
+      &quot;field&quot;: &quot;document_date&quot;,
+      &quot;extracted_raw&quot;: &quot;2026-09-15&quot;,
+      &quot;normalized_api&quot;: &quot;2026-09-15&quot;,
+      &quot;expected_normalized&quot;: &quot;2026-09-15&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-agent-visual-inspection.pdf&quot;,
+      &quot;field&quot;: &quot;property_address&quot;,
+      &quot;extracted_raw&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+      &quot;normalized_api&quot;: &quot;123 main st pasadena ca 91101&quot;,
+      &quot;expected_normalized&quot;: &quot;123 main st pasadena ca 91101&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-agent-visual-inspection.pdf&quot;,
+      &quot;field&quot;: &quot;apn&quot;,
+      &quot;extracted_raw&quot;: &quot;5842-018-024&quot;,
+      &quot;normalized_api&quot;: &quot;5842018024&quot;,
+      &quot;expected_normalized&quot;: &quot;5842018024&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-agent-visual-inspection.pdf&quot;,
+      &quot;field&quot;: &quot;seller_name&quot;,
+      &quot;extracted_raw&quot;: &quot;Jane Seller&quot;,
+      &quot;normalized_api&quot;: &quot;jane seller&quot;,
+      &quot;expected_normalized&quot;: &quot;jane seller&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-agent-visual-inspection.pdf&quot;,
+      &quot;field&quot;: &quot;listing_agent_name&quot;,
+      &quot;extracted_raw&quot;: &quot;Alex Agent&quot;,
+      &quot;normalized_api&quot;: &quot;alex agent&quot;,
+      &quot;expected_normalized&quot;: &quot;alex agent&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-agent-visual-inspection.pdf&quot;,
+      &quot;field&quot;: &quot;document_date&quot;,
+      &quot;extracted_raw&quot;: &quot;2026-09-17&quot;,
+      &quot;normalized_api&quot;: &quot;2026-09-17&quot;,
+      &quot;expected_normalized&quot;: &quot;2026-09-17&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-ca-nhd.pdf&quot;,
+      &quot;field&quot;: &quot;property_address&quot;,
+      &quot;extracted_raw&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+      &quot;normalized_api&quot;: &quot;123 main st pasadena ca 91101&quot;,
+      &quot;expected_normalized&quot;: &quot;123 main st pasadena ca 91101&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-ca-nhd.pdf&quot;,
+      &quot;field&quot;: &quot;apn&quot;,
+      &quot;extracted_raw&quot;: &quot;5842-018-024&quot;,
+      &quot;normalized_api&quot;: &quot;5842018024&quot;,
+      &quot;expected_normalized&quot;: &quot;5842018024&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-ca-nhd.pdf&quot;,
+      &quot;field&quot;: &quot;seller_name&quot;,
+      &quot;extracted_raw&quot;: &quot;Jane Seller&quot;,
+      &quot;normalized_api&quot;: &quot;jane seller&quot;,
+      &quot;expected_normalized&quot;: &quot;jane seller&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-ca-nhd.pdf&quot;,
+      &quot;field&quot;: &quot;listing_agent_name&quot;,
+      &quot;extracted_raw&quot;: &quot;Alex Agent&quot;,
+      &quot;normalized_api&quot;: &quot;alex agent&quot;,
+      &quot;expected_normalized&quot;: &quot;alex agent&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-ca-nhd.pdf&quot;,
+      &quot;field&quot;: &quot;document_date&quot;,
+      &quot;extracted_raw&quot;: null,
+      &quot;normalized_api&quot;: &quot;(absent)&quot;,
+      &quot;expected_normalized&quot;: &quot;(absent)&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-prelim-title-report.pdf&quot;,
+      &quot;field&quot;: &quot;property_address&quot;,
+      &quot;extracted_raw&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+      &quot;normalized_api&quot;: &quot;123 main st pasadena ca 91101&quot;,
+      &quot;expected_normalized&quot;: &quot;123 main st pasadena ca 91101&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-prelim-title-report.pdf&quot;,
+      &quot;field&quot;: &quot;apn&quot;,
+      &quot;extracted_raw&quot;: &quot;5842-018-024&quot;,
+      &quot;normalized_api&quot;: &quot;5842018024&quot;,
+      &quot;expected_normalized&quot;: &quot;5842018024&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-prelim-title-report.pdf&quot;,
+      &quot;field&quot;: &quot;seller_name&quot;,
+      &quot;extracted_raw&quot;: &quot;Jane Seller&quot;,
+      &quot;normalized_api&quot;: &quot;jane seller&quot;,
+      &quot;expected_normalized&quot;: &quot;jane seller&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-prelim-title-report.pdf&quot;,
+      &quot;field&quot;: &quot;listing_agent_name&quot;,
+      &quot;extracted_raw&quot;: null,
+      &quot;normalized_api&quot;: &quot;(absent)&quot;,
+      &quot;expected_normalized&quot;: &quot;(absent)&quot;,
+      &quot;agrees&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-prelim-title-report.pdf&quot;,
+      &quot;field&quot;: &quot;document_date&quot;,
+      &quot;extracted_raw&quot;: null,
+      &quot;normalized_api&quot;: &quot;(absent)&quot;,
+      &quot;expected_normalized&quot;: &quot;(absent)&quot;,
+      &quot;agrees&quot;: true
+    }
+  ]
+}</pre>
+</details></div></section><section class="card" id="stage-5"><h3>Stage 5 — Resolve — property identity and pre-reconcile review state</h3><div class="call"><div class="chead">
+<span class="m">GET</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18</span>
+<span class="b b-ok">200</span>
+<span class="ms">8.5 ms</span>
+<span class="lbl">GET readout (pre-reconcile: unmatched_document_ids)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;id&quot;: 18,
+  &quot;property_address&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+  &quot;apn&quot;: &quot;5842-018-024&quot;,
+  &quot;seller_name&quot;: &quot;Jane Seller&quot;,
+  &quot;property_attributes&quot;: {
+    &quot;hoa&quot;: true,
+    &quot;solar&quot;: true,
+    &quot;state&quot;: &quot;CA&quot;,
+    &quot;septic&quot;: false,
+    &quot;year_built&quot;: 1968,
+    &quot;seller_type&quot;: &quot;individual&quot;,
+    &quot;property_type&quot;: &quot;single_family&quot;
+  },
+  &quot;verdict&quot;: null,
+  &quot;reason&quot;: null,
+  &quot;readiness_assessed_at&quot;: null,
+  &quot;requirements&quot;: [
+    {
+      &quot;requirement_key&quot;: &quot;agency_disclosure&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;agent_visual_inspection&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_nhd&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_spq&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_tds&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;hoa_package&quot;,
+      &quot;requirement_type&quot;: &quot;PROPERTY_CONDITIONAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;lead_disclosure&quot;,
+      &quot;requirement_type&quot;: &quot;FEDERAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;listing_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;prelim_title_report&quot;,
+      &quot;requirement_type&quot;: &quot;BROKERAGE&quot;,
+      &quot;status&quot;: &quot;RECOMMENDED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;seller_advisory&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;solar_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;PROPERTY_CONDITIONAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;wcmd_advisory&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    }
+  ],
+  &quot;unmatched_document_ids&quot;: [
+    99,
+    100,
+    101,
+    102,
+    103,
+    104
+  ]
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">GET</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/review-queue</span>
+<span class="b b-ok">200</span>
+<span class="ms">14.8 ms</span>
+<span class="lbl">GET review-queue (pre-reconcile: every document unmatched, reason no_evidence)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;listing_file_id&quot;: 18,
+  &quot;exceptions&quot;: [],
+  &quot;unknown_documents&quot;: [],
+  &quot;unmatched_documents&quot;: [
+    {
+      &quot;document_id&quot;: 99,
+      &quot;document_name&quot;: &quot;demo-ca-tds.pdf&quot;,
+      &quot;reason&quot;: &quot;no_evidence&quot;
+    },
+    {
+      &quot;document_id&quot;: 100,
+      &quot;document_name&quot;: &quot;demo-ca-spq.pdf&quot;,
+      &quot;reason&quot;: &quot;no_evidence&quot;
+    },
+    {
+      &quot;document_id&quot;: 101,
+      &quot;document_name&quot;: &quot;demo-listing-agreement.pdf&quot;,
+      &quot;reason&quot;: &quot;no_evidence&quot;
+    },
+    {
+      &quot;document_id&quot;: 102,
+      &quot;document_name&quot;: &quot;demo-agent-visual-inspection.pdf&quot;,
+      &quot;reason&quot;: &quot;no_evidence&quot;
+    },
+    {
+      &quot;document_id&quot;: 103,
+      &quot;document_name&quot;: &quot;demo-ca-nhd.pdf&quot;,
+      &quot;reason&quot;: &quot;no_evidence&quot;
+    },
+    {
+      &quot;document_id&quot;: 104,
+      &quot;document_name&quot;: &quot;demo-prelim-title-report.pdf&quot;,
+      &quot;reason&quot;: &quot;no_evidence&quot;
+    }
+  ],
+  &quot;pending_verification&quot;: [],
+  &quot;overdue&quot;: [],
+  &quot;processing_failed&quot;: []
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m m-derived">DERIVED</span>
+<span>stage-3 normalized_data x listing-file identity</span>
+<span class="b b-bad">ERR</span>
+<span class="ms">0.0 ms</span>
+<span class="lbl">derived: document-vs-file identity (normalized facts) + property_mismatch count from review-queue</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;file&quot;: {
+    &quot;apn&quot;: &quot;5842018024&quot;,
+    &quot;address&quot;: &quot;123 main st pasadena ca 91101&quot;,
+    &quot;seller&quot;: &quot;jane seller&quot;
+  }
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;rows&quot;: [
+    {
+      &quot;document&quot;: &quot;demo-ca-tds.pdf&quot;,
+      &quot;apn_matches_file&quot;: true,
+      &quot;address_matches_file&quot;: true,
+      &quot;seller_matches_file&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-ca-spq.pdf&quot;,
+      &quot;apn_matches_file&quot;: true,
+      &quot;address_matches_file&quot;: true,
+      &quot;seller_matches_file&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-listing-agreement.pdf&quot;,
+      &quot;apn_matches_file&quot;: true,
+      &quot;address_matches_file&quot;: true,
+      &quot;seller_matches_file&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-agent-visual-inspection.pdf&quot;,
+      &quot;apn_matches_file&quot;: true,
+      &quot;address_matches_file&quot;: true,
+      &quot;seller_matches_file&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-ca-nhd.pdf&quot;,
+      &quot;apn_matches_file&quot;: true,
+      &quot;address_matches_file&quot;: true,
+      &quot;seller_matches_file&quot;: true
+    },
+    {
+      &quot;document&quot;: &quot;demo-prelim-title-report.pdf&quot;,
+      &quot;apn_matches_file&quot;: true,
+      &quot;address_matches_file&quot;: true,
+      &quot;seller_matches_file&quot;: true
+    }
+  ],
+  &quot;property_mismatch_documents&quot;: [],
+  &quot;note&quot;: &quot;is_property_mismatch is evaluated during reconcile; a mismatched document would surface here with reason property_mismatch&quot;
+}</pre>
+</details></div></section><section class="card" id="stage-6"><h3>Stage 6 — Reconcile — match documents to requirements</h3><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/reconcile</span>
+<span class="b b-ok">200</span>
+<span class="ms">17.5 ms</span>
+<span class="lbl">POST reconcile (evidence creation + RECEIVED transitions)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;evidence_created&quot;: 6,
+  &quot;requirements_moved_to_received&quot;: [
+    &quot;agent_visual_inspection&quot;,
+    &quot;ca_nhd&quot;,
+    &quot;ca_spq&quot;,
+    &quot;ca_tds&quot;,
+    &quot;listing_agreement&quot;,
+    &quot;prelim_title_report&quot;
+  ],
+  &quot;unmet_requirement_keys&quot;: [
+    &quot;agency_disclosure&quot;,
+    &quot;hoa_package&quot;,
+    &quot;lead_disclosure&quot;,
+    &quot;seller_advisory&quot;,
+    &quot;solar_agreement&quot;,
+    &quot;wcmd_advisory&quot;
+  ],
+  &quot;unmatched_document_ids&quot;: []
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">GET</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18</span>
+<span class="b b-ok">200</span>
+<span class="ms">4.6 ms</span>
+<span class="lbl">GET readout (post-reconcile requirement states)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;id&quot;: 18,
+  &quot;property_address&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+  &quot;apn&quot;: &quot;5842-018-024&quot;,
+  &quot;seller_name&quot;: &quot;Jane Seller&quot;,
+  &quot;property_attributes&quot;: {
+    &quot;hoa&quot;: true,
+    &quot;solar&quot;: true,
+    &quot;state&quot;: &quot;CA&quot;,
+    &quot;septic&quot;: false,
+    &quot;year_built&quot;: 1968,
+    &quot;seller_type&quot;: &quot;individual&quot;,
+    &quot;property_type&quot;: &quot;single_family&quot;
+  },
+  &quot;verdict&quot;: null,
+  &quot;reason&quot;: null,
+  &quot;readiness_assessed_at&quot;: null,
+  &quot;requirements&quot;: [
+    {
+      &quot;requirement_key&quot;: &quot;agency_disclosure&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;agent_visual_inspection&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_nhd&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_spq&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_tds&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;hoa_package&quot;,
+      &quot;requirement_type&quot;: &quot;PROPERTY_CONDITIONAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;lead_disclosure&quot;,
+      &quot;requirement_type&quot;: &quot;FEDERAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;listing_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;prelim_title_report&quot;,
+      &quot;requirement_type&quot;: &quot;BROKERAGE&quot;,
+      &quot;status&quot;: &quot;RECOMMENDED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;seller_advisory&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;solar_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;PROPERTY_CONDITIONAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;wcmd_advisory&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    }
+  ],
+  &quot;unmatched_document_ids&quot;: []
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">GET</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/review-queue</span>
+<span class="b b-ok">200</span>
+<span class="ms">7.4 ms</span>
+<span class="lbl">GET review-queue (post-reconcile: bindings via state_reason, unmatched empty)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;listing_file_id&quot;: 18,
+  &quot;exceptions&quot;: [],
+  &quot;unknown_documents&quot;: [],
+  &quot;unmatched_documents&quot;: [],
+  &quot;pending_verification&quot;: [
+    {
+      &quot;requirement_id&quot;: 162,
+      &quot;requirement_key&quot;: &quot;agent_visual_inspection&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #102 (AGENT_VISUAL_INSPECTION)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 163,
+      &quot;requirement_key&quot;: &quot;ca_nhd&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #103 (CA_NHD)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 161,
+      &quot;requirement_key&quot;: &quot;ca_spq&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #100 (CA_SPQ)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 160,
+      &quot;requirement_key&quot;: &quot;ca_tds&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #99 (CA_TDS)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 157,
+      &quot;requirement_key&quot;: &quot;listing_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #101 (LISTING_AGREEMENT)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 168,
+      &quot;requirement_key&quot;: &quot;prelim_title_report&quot;,
+      &quot;requirement_type&quot;: &quot;BROKERAGE&quot;,
+      &quot;status&quot;: &quot;RECOMMENDED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #104 (PRELIM_TITLE_REPORT)&quot;
+    }
+  ],
+  &quot;overdue&quot;: [],
+  &quot;processing_failed&quot;: []
+}</pre>
+</details></div></section><section class="card" id="stage-7"><h3>Stage 7 — Rule check (derived) — catalog x readout join</h3><div class="call"><div class="chead">
+<span class="m m-derived">DERIVED</span>
+<span>app/services/requirement_catalog.py x stage-1/6 responses</span>
+<span class="b b-bad">ERR</span>
+<span class="ms">0.0 ms</span>
+<span class="lbl">derived: CA catalog v1 x generate-requirements x readout states (pass = RECEIVED/VERIFIED, fail = PENDING blocking / EXCEPTION, warn = PENDING non-blocking)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;catalog_version&quot;: &quot;1&quot;,
+  &quot;jurisdiction&quot;: &quot;CA&quot;
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;counts&quot;: {
+    &quot;pass&quot;: 6,
+    &quot;fail&quot;: 6,
+    &quot;warn&quot;: 0,
+    &quot;n/a&quot;: 0
+  },
+  &quot;rows&quot;: [
+    {
+      &quot;requirement_key&quot;: &quot;listing_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;trigger&quot;: &quot;always&quot;,
+      &quot;fired&quot;: true,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;decision&quot;: &quot;pass&quot;,
+      &quot;rationale&quot;: &quot;evidence document received, awaiting human verification&quot;,
+      &quot;source&quot;: &quot;CAR RLA — brokerage listing contract&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;seller_advisory&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;trigger&quot;: &quot;always&quot;,
+      &quot;fired&quot;: true,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;decision&quot;: &quot;fail&quot;,
+      &quot;rationale&quot;: &quot;blocking requirement with no matching evidence document&quot;,
+      &quot;source&quot;: &quot;CAR SA — pre-listing seller advisory&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;agency_disclosure&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;trigger&quot;: &quot;always&quot;,
+      &quot;fired&quot;: true,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;decision&quot;: &quot;fail&quot;,
+      &quot;rationale&quot;: &quot;blocking requirement with no matching evidence document&quot;,
+      &quot;source&quot;: &quot;CAR AD — agency disclosure, precedes the listing agreement&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_tds&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;trigger&quot;: &quot;always&quot;,
+      &quot;fired&quot;: true,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;decision&quot;: &quot;pass&quot;,
+      &quot;rationale&quot;: &quot;evidence document received, awaiting human verification&quot;,
+      &quot;source&quot;: &quot;Cal. Civil Code §1102 et seq. — transfer disclosure statement&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_spq&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;trigger&quot;: &quot;always&quot;,
+      &quot;fired&quot;: true,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;decision&quot;: &quot;pass&quot;,
+      &quot;rationale&quot;: &quot;evidence document received, awaiting human verification&quot;,
+      &quot;source&quot;: &quot;CAR SPQ — seller property questionnaire, supplements TDS&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;agent_visual_inspection&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;trigger&quot;: &quot;always&quot;,
+      &quot;fired&quot;: true,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;decision&quot;: &quot;pass&quot;,
+      &quot;rationale&quot;: &quot;evidence document received, awaiting human verification&quot;,
+      &quot;source&quot;: &quot;Cal. Civil Code §1102.6 — agent visual inspection disclosure&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_nhd&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;trigger&quot;: &quot;always&quot;,
+      &quot;fired&quot;: true,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;decision&quot;: &quot;pass&quot;,
+      &quot;rationale&quot;: &quot;evidence document received, awaiting human verification&quot;,
+      &quot;source&quot;: &quot;Cal. Civil Code §1103 et seq. — natural hazard disclosure&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;wcmd_advisory&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;trigger&quot;: &quot;always&quot;,
+      &quot;fired&quot;: true,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;decision&quot;: &quot;fail&quot;,
+      &quot;rationale&quot;: &quot;blocking requirement with no matching evidence document&quot;,
+      &quot;source&quot;: &quot;Cal. Civil Code §§1101.1–1101.8 (SB 407) — water-conserving fixtures&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;lead_disclosure&quot;,
+      &quot;requirement_type&quot;: &quot;FEDERAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;trigger&quot;: {
+        &quot;field&quot;: {
+          &quot;field&quot;: &quot;year_built&quot;,
+          &quot;op&quot;: &quot;lt&quot;,
+          &quot;value&quot;: 1978
+        }
+      },
+      &quot;fired&quot;: true,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;decision&quot;: &quot;fail&quot;,
+      &quot;rationale&quot;: &quot;blocking requirement with no matching evidence document&quot;,
+      &quot;source&quot;: &quot;42 USC §4852d — federal lead-based paint disclosure&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;hoa_package&quot;,
+      &quot;requirement_type&quot;: &quot;PROPERTY_CONDITIONAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;trigger&quot;: {
+        &quot;field&quot;: {
+          &quot;field&quot;: &quot;hoa&quot;,
+          &quot;op&quot;: &quot;eq&quot;,
+          &quot;value&quot;: true
+        }
+      },
+      &quot;fired&quot;: true,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;decision&quot;: &quot;fail&quot;,
+      &quot;rationale&quot;: &quot;blocking requirement with no matching evidence document&quot;,
+      &quot;source&quot;: &quot;HOA resale package — CC&amp;Rs, budget, minutes&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;solar_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;PROPERTY_CONDITIONAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;trigger&quot;: {
+        &quot;field&quot;: {
+          &quot;field&quot;: &quot;solar&quot;,
+          &quot;op&quot;: &quot;eq&quot;,
+          &quot;value&quot;: true
+        }
+      },
+      &quot;fired&quot;: true,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;decision&quot;: &quot;fail&quot;,
+      &quot;rationale&quot;: &quot;blocking requirement with no matching evidence document&quot;,
+      &quot;source&quot;: &quot;Solar ownership / financing agreement&quot;
+    },
+    {
+      &quot;requirement_key&quot;: &quot;prelim_title_report&quot;,
+      &quot;requirement_type&quot;: &quot;BROKERAGE&quot;,
+      &quot;status&quot;: &quot;RECOMMENDED&quot;,
+      &quot;trigger&quot;: &quot;always&quot;,
+      &quot;fired&quot;: true,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;decision&quot;: &quot;pass&quot;,
+      &quot;rationale&quot;: &quot;evidence document received, awaiting human verification&quot;,
+      &quot;source&quot;: &quot;Brokerage file-completeness — preliminary title report&quot;
+    }
+  ]
+}</pre>
+</details></div></section><section class="card" id="stage-8"><h3>Stage 8 — Detect exceptions — R1 conflicts, R2 signatures, R3 overdue</h3><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/detect-exceptions</span>
+<span class="b b-ok">200</span>
+<span class="ms">30.9 ms</span>
+<span class="lbl">POST detect-exceptions</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;listing_file_id&quot;: 18,
+  &quot;conflicts&quot;: [],
+  &quot;missing_signatures&quot;: [],
+  &quot;overdue&quot;: [],
+  &quot;exceptions_raised&quot;: 0
+}</pre>
+</details></div></section><section class="card" id="stage-9"><h3>Stage 9 — Human review — queue, verdict before verification, verify x6</h3><div class="call"><div class="chead">
+<span class="m">GET</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/review-queue</span>
+<span class="b b-ok">200</span>
+<span class="ms">12.8 ms</span>
+<span class="lbl">GET review-queue (before verification)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;listing_file_id&quot;: 18,
+  &quot;exceptions&quot;: [],
+  &quot;unknown_documents&quot;: [],
+  &quot;unmatched_documents&quot;: [],
+  &quot;pending_verification&quot;: [
+    {
+      &quot;requirement_id&quot;: 162,
+      &quot;requirement_key&quot;: &quot;agent_visual_inspection&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #102 (AGENT_VISUAL_INSPECTION)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 163,
+      &quot;requirement_key&quot;: &quot;ca_nhd&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #103 (CA_NHD)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 161,
+      &quot;requirement_key&quot;: &quot;ca_spq&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #100 (CA_SPQ)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 160,
+      &quot;requirement_key&quot;: &quot;ca_tds&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #99 (CA_TDS)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 157,
+      &quot;requirement_key&quot;: &quot;listing_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #101 (LISTING_AGREEMENT)&quot;
+    },
+    {
+      &quot;requirement_id&quot;: 168,
+      &quot;requirement_key&quot;: &quot;prelim_title_report&quot;,
+      &quot;requirement_type&quot;: &quot;BROKERAGE&quot;,
+      &quot;status&quot;: &quot;RECOMMENDED&quot;,
+      &quot;state&quot;: &quot;RECEIVED&quot;,
+      &quot;state_reason&quot;: &quot;Matched document #104 (PRELIM_TITLE_REPORT)&quot;
+    }
+  ],
+  &quot;overdue&quot;: [],
+  &quot;processing_failed&quot;: []
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/verdict</span>
+<span class="b b-ok">200</span>
+<span class="ms">8.8 ms</span>
+<span class="lbl">POST verdict (BEFORE verification)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;verdict&quot;: &quot;NOT_READY&quot;,
+  &quot;reason&quot;: &quot;Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory. Advisory — recommended pending: prelim_title_report.&quot;,
+  &quot;blocking_pending&quot;: [
+    &quot;agency_disclosure&quot;,
+    &quot;hoa_package&quot;,
+    &quot;lead_disclosure&quot;,
+    &quot;seller_advisory&quot;,
+    &quot;solar_agreement&quot;,
+    &quot;wcmd_advisory&quot;
+  ],
+  &quot;blocking_exceptions&quot;: [],
+  &quot;pending_verification&quot;: [
+    &quot;agent_visual_inspection&quot;,
+    &quot;ca_nhd&quot;,
+    &quot;ca_spq&quot;,
+    &quot;ca_tds&quot;,
+    &quot;listing_agreement&quot;
+  ],
+  &quot;advisory&quot;: [
+    &quot;prelim_title_report&quot;
+  ]
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/requirements/162/verify</span>
+<span class="b b-ok">200</span>
+<span class="ms">34.9 ms</span>
+<span class="lbl">POST verify agent_visual_inspection (requirement_id 162)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;note&quot;: &quot;e2e journey e2e-journey-2026-10-07-passB-attempt2: verified agent_visual_inspection against matched evidence (simulated human review)&quot;
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;requirement_id&quot;: 162,
+  &quot;requirement_key&quot;: &quot;agent_visual_inspection&quot;,
+  &quot;state&quot;: &quot;VERIFIED&quot;,
+  &quot;state_reason&quot;: &quot;e2e journey e2e-journey-2026-10-07-passB-attempt2: verified agent_visual_inspection against matched evidence (simulated human review)&quot;,
+  &quot;verdict&quot;: &quot;NOT_READY&quot;,
+  &quot;reason&quot;: &quot;Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory. Advisory — recommended pending: prelim_title_report.&quot;
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/requirements/163/verify</span>
+<span class="b b-ok">200</span>
+<span class="ms">29.6 ms</span>
+<span class="lbl">POST verify ca_nhd (requirement_id 163)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;note&quot;: &quot;e2e journey e2e-journey-2026-10-07-passB-attempt2: verified ca_nhd against matched evidence (simulated human review)&quot;
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;requirement_id&quot;: 163,
+  &quot;requirement_key&quot;: &quot;ca_nhd&quot;,
+  &quot;state&quot;: &quot;VERIFIED&quot;,
+  &quot;state_reason&quot;: &quot;e2e journey e2e-journey-2026-10-07-passB-attempt2: verified ca_nhd against matched evidence (simulated human review)&quot;,
+  &quot;verdict&quot;: &quot;NOT_READY&quot;,
+  &quot;reason&quot;: &quot;Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory. Advisory — recommended pending: prelim_title_report.&quot;
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/requirements/161/verify</span>
+<span class="b b-ok">200</span>
+<span class="ms">22.6 ms</span>
+<span class="lbl">POST verify ca_spq (requirement_id 161)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;note&quot;: &quot;e2e journey e2e-journey-2026-10-07-passB-attempt2: verified ca_spq against matched evidence (simulated human review)&quot;
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;requirement_id&quot;: 161,
+  &quot;requirement_key&quot;: &quot;ca_spq&quot;,
+  &quot;state&quot;: &quot;VERIFIED&quot;,
+  &quot;state_reason&quot;: &quot;e2e journey e2e-journey-2026-10-07-passB-attempt2: verified ca_spq against matched evidence (simulated human review)&quot;,
+  &quot;verdict&quot;: &quot;NOT_READY&quot;,
+  &quot;reason&quot;: &quot;Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory. Advisory — recommended pending: prelim_title_report.&quot;
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/requirements/160/verify</span>
+<span class="b b-ok">200</span>
+<span class="ms">7.1 ms</span>
+<span class="lbl">POST verify ca_tds (requirement_id 160)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;note&quot;: &quot;e2e journey e2e-journey-2026-10-07-passB-attempt2: verified ca_tds against matched evidence (simulated human review)&quot;
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;requirement_id&quot;: 160,
+  &quot;requirement_key&quot;: &quot;ca_tds&quot;,
+  &quot;state&quot;: &quot;VERIFIED&quot;,
+  &quot;state_reason&quot;: &quot;e2e journey e2e-journey-2026-10-07-passB-attempt2: verified ca_tds against matched evidence (simulated human review)&quot;,
+  &quot;verdict&quot;: &quot;NOT_READY&quot;,
+  &quot;reason&quot;: &quot;Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory. Advisory — recommended pending: prelim_title_report.&quot;
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/requirements/157/verify</span>
+<span class="b b-ok">200</span>
+<span class="ms">6.9 ms</span>
+<span class="lbl">POST verify listing_agreement (requirement_id 157)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;note&quot;: &quot;e2e journey e2e-journey-2026-10-07-passB-attempt2: verified listing_agreement against matched evidence (simulated human review)&quot;
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;requirement_id&quot;: 157,
+  &quot;requirement_key&quot;: &quot;listing_agreement&quot;,
+  &quot;state&quot;: &quot;VERIFIED&quot;,
+  &quot;state_reason&quot;: &quot;e2e journey e2e-journey-2026-10-07-passB-attempt2: verified listing_agreement against matched evidence (simulated human review)&quot;,
+  &quot;verdict&quot;: &quot;NOT_READY&quot;,
+  &quot;reason&quot;: &quot;Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory. Advisory — recommended pending: prelim_title_report.&quot;
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/requirements/168/verify</span>
+<span class="b b-ok">200</span>
+<span class="ms">7.5 ms</span>
+<span class="lbl">POST verify prelim_title_report (requirement_id 168)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>{
+  &quot;note&quot;: &quot;e2e journey e2e-journey-2026-10-07-passB-attempt2: verified prelim_title_report against matched evidence (simulated human review)&quot;
+}</pre>
+<div class="k">response</div><pre>{
+  &quot;requirement_id&quot;: 168,
+  &quot;requirement_key&quot;: &quot;prelim_title_report&quot;,
+  &quot;state&quot;: &quot;VERIFIED&quot;,
+  &quot;state_reason&quot;: &quot;e2e journey e2e-journey-2026-10-07-passB-attempt2: verified prelim_title_report against matched evidence (simulated human review)&quot;,
+  &quot;verdict&quot;: &quot;NOT_READY&quot;,
+  &quot;reason&quot;: &quot;Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory.&quot;
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/detect-exceptions</span>
+<span class="b b-ok">200</span>
+<span class="ms">5.0 ms</span>
+<span class="lbl">POST detect-exceptions (re-run after verification)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;listing_file_id&quot;: 18,
+  &quot;conflicts&quot;: [],
+  &quot;missing_signatures&quot;: [],
+  &quot;overdue&quot;: [],
+  &quot;exceptions_raised&quot;: 0
+}</pre>
+</details></div></section><section class="card" id="stage-10"><h3>Stage 10 — Verdict — AFTER verification, final readout and queue</h3><div class="call"><div class="chead">
+<span class="m">POST</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/verdict</span>
+<span class="b b-ok">200</span>
+<span class="ms">4.0 ms</span>
+<span class="lbl">POST verdict (AFTER verification)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;verdict&quot;: &quot;NOT_READY&quot;,
+  &quot;reason&quot;: &quot;Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory.&quot;,
+  &quot;blocking_pending&quot;: [
+    &quot;agency_disclosure&quot;,
+    &quot;hoa_package&quot;,
+    &quot;lead_disclosure&quot;,
+    &quot;seller_advisory&quot;,
+    &quot;solar_agreement&quot;,
+    &quot;wcmd_advisory&quot;
+  ],
+  &quot;blocking_exceptions&quot;: [],
+  &quot;pending_verification&quot;: [],
+  &quot;advisory&quot;: []
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">GET</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18</span>
+<span class="b b-ok">200</span>
+<span class="ms">13.9 ms</span>
+<span class="lbl">GET readout (final state)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;id&quot;: 18,
+  &quot;property_address&quot;: &quot;123 Main St, Pasadena, CA 91101&quot;,
+  &quot;apn&quot;: &quot;5842-018-024&quot;,
+  &quot;seller_name&quot;: &quot;Jane Seller&quot;,
+  &quot;property_attributes&quot;: {
+    &quot;hoa&quot;: true,
+    &quot;solar&quot;: true,
+    &quot;state&quot;: &quot;CA&quot;,
+    &quot;septic&quot;: false,
+    &quot;year_built&quot;: 1968,
+    &quot;seller_type&quot;: &quot;individual&quot;,
+    &quot;property_type&quot;: &quot;single_family&quot;
+  },
+  &quot;verdict&quot;: &quot;NOT_READY&quot;,
+  &quot;reason&quot;: &quot;Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory.&quot;,
+  &quot;readiness_assessed_at&quot;: &quot;2026-10-07T14:06:28.239127Z&quot;,
+  &quot;requirements&quot;: [
+    {
+      &quot;requirement_key&quot;: &quot;agency_disclosure&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;agent_visual_inspection&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;VERIFIED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_nhd&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;VERIFIED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_spq&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;VERIFIED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;ca_tds&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;VERIFIED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;hoa_package&quot;,
+      &quot;requirement_type&quot;: &quot;PROPERTY_CONDITIONAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;lead_disclosure&quot;,
+      &quot;requirement_type&quot;: &quot;FEDERAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;listing_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;VERIFIED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;prelim_title_report&quot;,
+      &quot;requirement_type&quot;: &quot;BROKERAGE&quot;,
+      &quot;status&quot;: &quot;RECOMMENDED&quot;,
+      &quot;state&quot;: &quot;VERIFIED&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;seller_advisory&quot;,
+      &quot;requirement_type&quot;: &quot;CORE&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;solar_agreement&quot;,
+      &quot;requirement_type&quot;: &quot;PROPERTY_CONDITIONAL&quot;,
+      &quot;status&quot;: &quot;CONDITIONALLY_REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    },
+    {
+      &quot;requirement_key&quot;: &quot;wcmd_advisory&quot;,
+      &quot;requirement_type&quot;: &quot;JURISDICTIONAL&quot;,
+      &quot;status&quot;: &quot;REQUIRED&quot;,
+      &quot;state&quot;: &quot;PENDING&quot;,
+      &quot;overdue&quot;: false
+    }
+  ],
+  &quot;unmatched_document_ids&quot;: []
+}</pre>
+</details></div><div class="call"><div class="chead">
+<span class="m">GET</span>
+<span>http://127.0.0.1:8011/v1/listing-files/18/review-queue</span>
+<span class="b b-ok">200</span>
+<span class="ms">5.2 ms</span>
+<span class="lbl">GET review-queue (final: pending_verification empty)</span>
+</div>
+<details><summary>request / response</summary>
+<div class="k">request</div><pre>null</pre>
+<div class="k">response</div><pre>{
+  &quot;listing_file_id&quot;: 18,
+  &quot;exceptions&quot;: [],
+  &quot;unknown_documents&quot;: [],
+  &quot;unmatched_documents&quot;: [],
+  &quot;pending_verification&quot;: [],
+  &quot;overdue&quot;: [],
+  &quot;processing_failed&quot;: []
+}</pre>
+</details></div></section>
+
+<section class="card" id="rule-check">
+<h2>Rule check table (DERIVED — no rule-check endpoint exists)</h2>
+<p class="sub">DERIVED join of <code>app/services/requirement_catalog.py</code> (CA catalog v1) with the
+stage-1 generate-requirements response and the stage-6 readout states. pass = RECEIVED or VERIFIED;
+fail = PENDING on a blocking status, or EXCEPTION; warn = PENDING non-blocking.
+Counts: pass 6, fail 6, warn 0, n/a 0.</p>
+<table>
+<tr><th>Requirement key</th><th>Type</th><th>Status</th><th>Trigger</th><th>Fired</th><th>State</th>
+<th>Decision</th><th>Rationale</th><th>Source (statute / form family)</th></tr>
+<tr class="okrow"><td><code>listing_agreement</code></td><td>CORE</td><td>REQUIRED</td><td>always</td><td>yes</td><td>RECEIVED</td><td><span class="b b-ok">pass</span></td><td>evidence document received, awaiting human verification</td><td>CAR RLA — brokerage listing contract</td></tr><tr class="badrow"><td><code>seller_advisory</code></td><td>CORE</td><td>REQUIRED</td><td>always</td><td>yes</td><td>PENDING</td><td><span class="b b-bad">fail</span></td><td>blocking requirement with no matching evidence document</td><td>CAR SA — pre-listing seller advisory</td></tr><tr class="badrow"><td><code>agency_disclosure</code></td><td>CORE</td><td>REQUIRED</td><td>always</td><td>yes</td><td>PENDING</td><td><span class="b b-bad">fail</span></td><td>blocking requirement with no matching evidence document</td><td>CAR AD — agency disclosure, precedes the listing agreement</td></tr><tr class="okrow"><td><code>ca_tds</code></td><td>JURISDICTIONAL</td><td>REQUIRED</td><td>always</td><td>yes</td><td>RECEIVED</td><td><span class="b b-ok">pass</span></td><td>evidence document received, awaiting human verification</td><td>Cal. Civil Code §1102 et seq. — transfer disclosure statement</td></tr><tr class="okrow"><td><code>ca_spq</code></td><td>JURISDICTIONAL</td><td>REQUIRED</td><td>always</td><td>yes</td><td>RECEIVED</td><td><span class="b b-ok">pass</span></td><td>evidence document received, awaiting human verification</td><td>CAR SPQ — seller property questionnaire, supplements TDS</td></tr><tr class="okrow"><td><code>agent_visual_inspection</code></td><td>JURISDICTIONAL</td><td>REQUIRED</td><td>always</td><td>yes</td><td>RECEIVED</td><td><span class="b b-ok">pass</span></td><td>evidence document received, awaiting human verification</td><td>Cal. Civil Code §1102.6 — agent visual inspection disclosure</td></tr><tr class="okrow"><td><code>ca_nhd</code></td><td>JURISDICTIONAL</td><td>REQUIRED</td><td>always</td><td>yes</td><td>RECEIVED</td><td><span class="b b-ok">pass</span></td><td>evidence document received, awaiting human verification</td><td>Cal. Civil Code §1103 et seq. — natural hazard disclosure</td></tr><tr class="badrow"><td><code>wcmd_advisory</code></td><td>JURISDICTIONAL</td><td>REQUIRED</td><td>always</td><td>yes</td><td>PENDING</td><td><span class="b b-bad">fail</span></td><td>blocking requirement with no matching evidence document</td><td>Cal. Civil Code §§1101.1–1101.8 (SB 407) — water-conserving fixtures</td></tr><tr class="badrow"><td><code>lead_disclosure</code></td><td>FEDERAL</td><td>CONDITIONALLY_REQUIRED</td><td>{&quot;field&quot;: {&quot;field&quot;: &quot;year_built&quot;, &quot;op&quot;: &quot;lt&quot;, &quot;value&quot;: 1978}}</td><td>yes</td><td>PENDING</td><td><span class="b b-bad">fail</span></td><td>blocking requirement with no matching evidence document</td><td>42 USC §4852d — federal lead-based paint disclosure</td></tr><tr class="badrow"><td><code>hoa_package</code></td><td>PROPERTY_CONDITIONAL</td><td>CONDITIONALLY_REQUIRED</td><td>{&quot;field&quot;: {&quot;field&quot;: &quot;hoa&quot;, &quot;op&quot;: &quot;eq&quot;, &quot;value&quot;: true}}</td><td>yes</td><td>PENDING</td><td><span class="b b-bad">fail</span></td><td>blocking requirement with no matching evidence document</td><td>HOA resale package — CC&amp;Rs, budget, minutes</td></tr><tr class="badrow"><td><code>solar_agreement</code></td><td>PROPERTY_CONDITIONAL</td><td>CONDITIONALLY_REQUIRED</td><td>{&quot;field&quot;: {&quot;field&quot;: &quot;solar&quot;, &quot;op&quot;: &quot;eq&quot;, &quot;value&quot;: true}}</td><td>yes</td><td>PENDING</td><td><span class="b b-bad">fail</span></td><td>blocking requirement with no matching evidence document</td><td>Solar ownership / financing agreement</td></tr><tr class="okrow"><td><code>prelim_title_report</code></td><td>BROKERAGE</td><td>RECOMMENDED</td><td>always</td><td>yes</td><td>RECEIVED</td><td><span class="b b-ok">pass</span></td><td>evidence document received, awaiting human verification</td><td>Brokerage file-completeness — preliminary title report</td></tr>
+</table>
+</section>
+
+<section class="card" id="verdict">
+<h2>Verdict — before vs after human verification</h2>
+<div class="grid2">
+<div><div class="k">BEFORE verify (stage 9 POST /verdict)</div>{
+  &quot;verdict&quot;: &quot;NOT_READY&quot;,
+  &quot;reason&quot;: &quot;Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory. Advisory — recommended pending: prelim_title_report.&quot;,
+  &quot;blocking_pending&quot;: [
+    &quot;agency_disclosure&quot;,
+    &quot;hoa_package&quot;,
+    &quot;lead_disclosure&quot;,
+    &quot;seller_advisory&quot;,
+    &quot;solar_agreement&quot;,
+    &quot;wcmd_advisory&quot;
+  ],
+  &quot;blocking_exceptions&quot;: [],
+  &quot;pending_verification&quot;: [
+    &quot;agent_visual_inspection&quot;,
+    &quot;ca_nhd&quot;,
+    &quot;ca_spq&quot;,
+    &quot;ca_tds&quot;,
+    &quot;listing_agreement&quot;
+  ],
+  &quot;advisory&quot;: [
+    &quot;prelim_title_report&quot;
+  ]
+}</div>
+<div><div class="k">AFTER verify x6 (stage 10 POST /verdict)</div>{
+  &quot;verdict&quot;: &quot;NOT_READY&quot;,
+  &quot;reason&quot;: &quot;Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory.&quot;,
+  &quot;blocking_pending&quot;: [
+    &quot;agency_disclosure&quot;,
+    &quot;hoa_package&quot;,
+    &quot;lead_disclosure&quot;,
+    &quot;seller_advisory&quot;,
+    &quot;solar_agreement&quot;,
+    &quot;wcmd_advisory&quot;
+  ],
+  &quot;blocking_exceptions&quot;: [],
+  &quot;pending_verification&quot;: [],
+  &quot;advisory&quot;: []
+}</div>
+</div>
+<h3>Verify calls (stage 9)</h3>
+<table><tr><th>requirement_id</th><th>key</th><th>state after</th><th>verdict mid-run</th></tr>
+<tr><td>162</td><td><code>agent_visual_inspection</code></td><td>VERIFIED</td><td>NOT_READY</td></tr><tr><td>163</td><td><code>ca_nhd</code></td><td>VERIFIED</td><td>NOT_READY</td></tr><tr><td>161</td><td><code>ca_spq</code></td><td>VERIFIED</td><td>NOT_READY</td></tr><tr><td>160</td><td><code>ca_tds</code></td><td>VERIFIED</td><td>NOT_READY</td></tr><tr><td>157</td><td><code>listing_agreement</code></td><td>VERIFIED</td><td>NOT_READY</td></tr><tr><td>168</td><td><code>prelim_title_report</code></td><td>VERIFIED</td><td>NOT_READY</td></tr>
+</table>
+
+<h3>Dimensions (DERIVED — <code>VerdictResponse</code> carries no dimension fields)</h3>
+<table>
+<tr><th>Dimension</th><th>Derived from</th><th>Value</th></tr>
+<tr><td>Completeness — requirements by state (post-reconcile, stage 6)</td><td>GET readout (stage 6)</td>
+<td>total 12, RECEIVED 6, VERIFIED 0, PENDING 6, EXCEPTION 0;
+unmatched documents 0</td></tr>
+<tr><td>Completeness — requirements by state (final, stage 10)</td><td>GET readout (stage 10)</td>
+<td>total 12, RECEIVED 0, VERIFIED 6, PENDING 6, EXCEPTION 0</td></tr>
+<tr><td>Consistency — R1 conflicts</td><td>POST detect-exceptions (stage 8)</td>
+<td>0 conflicts <pre>[]</pre></td></tr>
+<tr><td>Consistency — R2 missing signatures</td><td>POST detect-exceptions (stage 8)</td>
+<td>0 findings (engine checks <code>signatures_present is False</code>; None means unknown, not unsigned)</td></tr>
+<tr><td>Consistency — R3 overdue</td><td>POST detect-exceptions (stage 8)</td>
+<td>0 findings</td></tr>
+<tr><td>Consistency — detect re-run after verify</td><td>stage 8 vs stage 9 response</td>
+<td>identical; exceptions_raised 0 &rarr; 0</td></tr>
+<tr><td>Consistency — shared-fact normalization</td><td>stage-4 derived table</td>
+<td>30 of 30 cells agree</td></tr>
+<tr><td>Compliance — rule check</td><td>derived rule table</td>
+<td>pass 6, fail 6, warn 0, n/a 0</td></tr>
+<tr><td>Compliance — blocking lists (after)</td><td>POST verdict (stage 10)</td>
+<td>blocking_pending 6 keys, blocking_exceptions 0,
+pending_verification 0, advisory 0</td></tr>
+</table>
+
+<h3>Requirements still missing after the run (state PENDING)</h3>
+<p class="sub">State columns are live API values; the <b>Owner</b> column is DERIVED by this report
+(the engine's <code>Requirement.owner</code> field is never populated).</p>
+<table><tr><th>Requirement</th><th>Type</th><th>Status</th><th>Trigger that fired</th><th>Source</th><th>Owner (DERIVED)</th></tr>
+<tr><td><code>seller_advisory</code></td><td>CORE</td><td>REQUIRED</td><td>always</td><td>CAR SA — pre-listing seller advisory</td><td>seller</td></tr><tr><td><code>agency_disclosure</code></td><td>CORE</td><td>REQUIRED</td><td>always</td><td>CAR AD — agency disclosure, precedes the listing agreement</td><td>listing agent</td></tr><tr><td><code>wcmd_advisory</code></td><td>JURISDICTIONAL</td><td>REQUIRED</td><td>always</td><td>Cal. Civil Code §§1101.1–1101.8 (SB 407) — water-conserving fixtures</td><td>listing agent</td></tr><tr><td><code>lead_disclosure</code></td><td>FEDERAL</td><td>CONDITIONALLY_REQUIRED</td><td>{&quot;field&quot;: {&quot;field&quot;: &quot;year_built&quot;, &quot;op&quot;: &quot;lt&quot;, &quot;value&quot;: 1978}}</td><td>42 USC §4852d — federal lead-based paint disclosure</td><td>seller + listing agent</td></tr><tr><td><code>hoa_package</code></td><td>PROPERTY_CONDITIONAL</td><td>CONDITIONALLY_REQUIRED</td><td>{&quot;field&quot;: {&quot;field&quot;: &quot;hoa&quot;, &quot;op&quot;: &quot;eq&quot;, &quot;value&quot;: true}}</td><td>HOA resale package — CC&amp;Rs, budget, minutes</td><td>third party (HOA / management company)</td></tr><tr><td><code>solar_agreement</code></td><td>PROPERTY_CONDITIONAL</td><td>CONDITIONALLY_REQUIRED</td><td>{&quot;field&quot;: {&quot;field&quot;: &quot;solar&quot;, &quot;op&quot;: &quot;eq&quot;, &quot;value&quot;: true}}</td><td>Solar ownership / financing agreement</td><td>third party (solar provider)</td></tr></table>
+
+<h3>Requirement &rarr; document bindings (from review-queue <code>state_reason</code>)</h3>
+<pre>[
+  {
+    &quot;requirement_key&quot;: &quot;agent_visual_inspection&quot;,
+    &quot;state_reason&quot;: &quot;Matched document #102 (AGENT_VISUAL_INSPECTION)&quot;
+  },
+  {
+    &quot;requirement_key&quot;: &quot;ca_nhd&quot;,
+    &quot;state_reason&quot;: &quot;Matched document #103 (CA_NHD)&quot;
+  },
+  {
+    &quot;requirement_key&quot;: &quot;ca_spq&quot;,
+    &quot;state_reason&quot;: &quot;Matched document #100 (CA_SPQ)&quot;
+  },
+  {
+    &quot;requirement_key&quot;: &quot;ca_tds&quot;,
+    &quot;state_reason&quot;: &quot;Matched document #99 (CA_TDS)&quot;
+  },
+  {
+    &quot;requirement_key&quot;: &quot;listing_agreement&quot;,
+    &quot;state_reason&quot;: &quot;Matched document #101 (LISTING_AGREEMENT)&quot;
+  },
+  {
+    &quot;requirement_key&quot;: &quot;prelim_title_report&quot;,
+    &quot;state_reason&quot;: &quot;Matched document #104 (PRELIM_TITLE_REPORT)&quot;
+  }
+]</pre>
+</section>
+
+<section class="card" id="scorecard">
+<h2>Measurement scorecard</h2>
+
+<h3>Byte identity — local fixture file vs server-stored content</h3>
+<table><tr><th>Document</th><th>Size / pages</th><th>sha256 (local, also the text-layer source)</th>
+<th>content_hash (GET /documents/&#123;id&#125;)</th><th>Equal</th></tr><tr class="okrow"><td>demo-ca-tds.pdf</td><td>9914 B / 3 pp</td><td><code>35a6383a6ce50f7c1255…</code></td><td><code>35a6383a6ce50f7c1255…</code></td><td>yes</td></tr><tr class="okrow"><td>demo-ca-spq.pdf</td><td>10186 B / 4 pp</td><td><code>df1e6f2f27c43149db4e…</code></td><td><code>df1e6f2f27c43149db4e…</code></td><td>yes</td></tr><tr class="okrow"><td>demo-listing-agreement.pdf</td><td>14801 B / 7 pp</td><td><code>197711c62a354e6db0b4…</code></td><td><code>197711c62a354e6db0b4…</code></td><td>yes</td></tr><tr class="okrow"><td>demo-agent-visual-inspection.pdf</td><td>7298 B / 3 pp</td><td><code>051063a17782a31c4428…</code></td><td><code>051063a17782a31c4428…</code></td><td>yes</td></tr><tr class="okrow"><td>demo-ca-nhd.pdf</td><td>9001 B / 4 pp</td><td><code>4291f3ed95ff863a1f81…</code></td><td><code>4291f3ed95ff863a1f81…</code></td><td>yes</td></tr><tr class="okrow"><td>demo-prelim-title-report.pdf</td><td>16128 B / 9 pp</td><td><code>bd5c63bb67f4f8633bdc…</code></td><td><code>bd5c63bb67f4f8633bdc…</code></td><td>yes</td></tr></table>
+
+<h3>Classification (stage 2)</h3>
+<table><tr><th>Document</th><th>Expected type</th><th>Actual type</th><th>Confidence</th><th>OK</th></tr><tr class="okrow"><td>demo-ca-tds.pdf</td><td>CA_TDS</td><td>CA_TDS</td><td>0.95</td><td>yes</td></tr><tr class="okrow"><td>demo-ca-spq.pdf</td><td>CA_SPQ</td><td>CA_SPQ</td><td>0.95</td><td>yes</td></tr><tr class="okrow"><td>demo-listing-agreement.pdf</td><td>LISTING_AGREEMENT</td><td>LISTING_AGREEMENT</td><td>0.96</td><td>yes</td></tr><tr class="okrow"><td>demo-agent-visual-inspection.pdf</td><td>AGENT_VISUAL_INSPECTION</td><td>AGENT_VISUAL_INSPECTION</td><td>0.94</td><td>yes</td></tr><tr class="okrow"><td>demo-ca-nhd.pdf</td><td>CA_NHD</td><td>CA_NHD</td><td>0.95</td><td>yes</td></tr><tr class="okrow"><td>demo-prelim-title-report.pdf</td><td>PRELIM_TITLE_REPORT</td><td>PRELIM_TITLE_REPORT</td><td>0.94</td><td>yes</td></tr></table>
+
+<h3>Layer 1 — text fidelity vs the PDF text layer</h3>
+<p class="sub">Text source: pypdf extraction of the exact uploaded bytes (identity verified above),
+line-edge normalized. Check types: <code>presence</code> (substring),
+<code>assoc</code> (needle within N chars of an anchor),
+<code>pre</code> (exact prefix line immediately before the needle),
+<code>forbid_win</code> (regex must NOT match inside the window — a match is a failed negative assertion).
+recall = tp / (tp + fn) = 328 / 328; precision = tp / (tp + fp) = 328 / 328.
+Raw counts, no rounding. Grand total: 331 / 331 checks passed.</p>
+<div class="note"><b>Measurement notes.</b> Checkbox glyphs in the TDS/SPQ and the NHD Part-1 Yes/No column are
+drawn as vector graphics and do not appear in the text layer, so those checks assert the text that does exist
+(item labels, comments, the B10 correction line, Part-2 matrix row association). RLA section 5 compensation
+fields are blank (<code>____%</code>) by fixture design; the check asserts no percentage is present there.
+The engine has no severity concept and no per-document resolve endpoint — see the derived panels and Findings.</div>
+<details><summary>demo-ca-tds.pdf — 90/90 passed (tp 89, fn 0, fp 0)</summary><table><tr><th>Check id</th><th>Type</th><th>Result</th><th>Detail</th></tr><tr class="okrow"><td><code>tds.marker</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.title</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.disclosure_date</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.address</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.apn</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.seller</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.year_built</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.parties</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.secA</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a01</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a02</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a03</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a04</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a05</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a06</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a07</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a08</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a09</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a10</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a11</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a12</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a13</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a14</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a15</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a16</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a17</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a18</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a19</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a20</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a21</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a22</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a23</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a24</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a25</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a26</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a27</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a28</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a29</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a30</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a31</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a32</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a33</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a34</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a35</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a36</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a37</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a38</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a39</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.a40</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.secB</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b01</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b02</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b03</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b04</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b05</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b06</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b07</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b08</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b09</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b10</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b11</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b12</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b13</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b14</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b15</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b16</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b02.pen</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b10.correction</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b10.correction_detail</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.b10.no_struck_yes</code></td><td>forbid_win</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.secC</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.c01</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.c02</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.c03</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.c04</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.c05</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.c06</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.c07</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.c08</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.c09</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.c10</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.c11</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.c12</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.c13</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.c14</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.c15</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.c16</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.secD</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.sig_seller</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>tds.marker2</code></td><td>presence</td><td>pass</td><td></td></tr></table></details><details><summary>demo-ca-spq.pdf — 54/54 passed (tp 54, fn 0, fp 0)</summary><table><tr><th>Check id</th><th>Type</th><th>Result</th><th>Detail</th></tr><tr class="okrow"><td><code>spq.marker</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.initials</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.title</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.completion_date</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.address</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.apn</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.seller</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.grpA</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.a1</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.a2</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.a3</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.a4</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.a5</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.a6</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.a7</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.a8</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.a2.pen</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.grpB</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.b1</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.b2</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.b3</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.b4</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.b5</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.b6</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.grpC</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.c1</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.c2</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.c3</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.c3.pen</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.c4</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.c5</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.c6</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.c7</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.c8</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.grpD</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.d.pre1974</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.dA</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.dB</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.dD</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.dE</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.dF</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.grpE</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.e1</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.e2</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.e3</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.e4</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.e5</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.e6</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.s8</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.s9</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.s10</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.s11</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.sig</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>spq.marker2</code></td><td>presence</td><td>pass</td><td></td></tr></table></details><details><summary>demo-listing-agreement.pdf — 46/46 passed (tp 45, fn 0, fp 0)</summary><table><tr><th>Check id</th><th>Type</th><th>Result</th><th>Detail</th></tr><tr class="okrow"><td><code>rla.marker</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.title</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.doc_date</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.address</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.apn</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.seller</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.price</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.effective</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.expiration</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.ets</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.grid.prop</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.grid.seller</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.grid.agent</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.grid.priceterm</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s01</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s02</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s03</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s04</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s05</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s06</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s07</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s08</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s09</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s10</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s11</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s12</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s13</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s14</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s15</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s16</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s17</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s18</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s19</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s20</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.s21</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.closing_stmt</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.comp_blank_pct</code></td><td>forbid_win</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.comp_blank_present</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.contacts.agent</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.contacts.tc</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.contacts.broker</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.contacts.escrow</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.sig_block</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.sig_broker_dre</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.sig_seller_date</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>rla.marker2</code></td><td>presence</td><td>pass</td><td></td></tr></table></details><details><summary>demo-agent-visual-inspection.pdf — 40/40 passed (tp 39, fn 0, fp 0)</summary><table><tr><th>Check id</th><th>Type</th><th>Result</th><th>Detail</th></tr><tr class="okrow"><td><code>avid.marker</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.title</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.insp_date_cover</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.address</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.apn</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.seller</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.weather</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.participants</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.row_part1</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.row_part2</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.row_part3</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.row_part4</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.table_hdr</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.area01</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.area02</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.area03</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.area04</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.area05</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.area06</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.area07</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.area08</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.area09</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.area10</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.area11</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.area12</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.area13</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.area14</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.notobs_hdr</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.notobs1</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.notobs2</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.notobs3</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.notobs4</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.notobs5</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.note1</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.note2</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.sig_agent</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.sig_agent_date</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.sig_seller</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.sig_buyer_blank</code></td><td>forbid_win</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>avid.marker2</code></td><td>presence</td><td>pass</td><td></td></tr></table></details><details><summary>demo-ca-nhd.pdf — 37/37 passed (tp 37, fn 0, fp 0)</summary><table><tr><th>Check id</th><th>Type</th><th>Result</th><th>Detail</th></tr><tr class="okrow"><td><code>nhd.marker</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.title</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.report_date</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.report_no</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.address</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.apn</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.seller</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.part1</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.q_hdr</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.q1</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.q2</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.q3</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.q4</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.q5</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.q6</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.stmt_sig_seller</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.stmt_sig_agent</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.part2</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.prepared_by</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.report_nodate</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.property_line</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.matrix_hdr</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.mx1</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.mx2</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.mx3</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.mx4</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.mx5</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.mx6</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.consistency</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.d1</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.d2</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.d3</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.d4</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.d5</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.d6</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.preparer</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>nhd.marker2</code></td><td>presence</td><td>pass</td><td></td></tr></table></details><details><summary>demo-prelim-title-report.pdf — 64/64 passed (tp 64, fn 0, fp 0)</summary><table><tr><th>Check id</th><th>Type</th><th>Result</th><th>Detail</th></tr><tr class="okrow"><td><code>pre.marker</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.title</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.report_date_cover</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.underwriter</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.report_date_grid</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.effective_date</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.property</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.apn_line</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.vesting_instrument</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.report_type</code></td><td>assoc</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.vested_in</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.estate</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.legal</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.req_hdr</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.req1</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.req2</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.req3</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.req4</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.req5</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.req6</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.cont1</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.cont2</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.cont3</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.cont4</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.b1_hdr</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.bi1</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.bi2</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.bi3</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.bi4</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.bi5</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.bi6</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.bi7</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.bi8</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.bi9</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.bi10</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.bi11</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.insured_over</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.note_flood</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.note_zoning</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.note_assess</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.note_pp</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.note_road</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.tax_secured</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.tax_direct</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.tax_vineyard</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.tax_melloroos</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.vest1</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.vest2</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.exa_hdr</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.exa1</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.exa2</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.exa3</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.exa4</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.exa5</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.exa6</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.exa7</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.exa8</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.exa9</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.exa10</code></td><td>pre</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.cl1</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.cl2</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.cl3</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.cl4</code></td><td>presence</td><td>pass</td><td></td></tr><tr class="okrow"><td><code>pre.marker2</code></td><td>presence</td><td>pass</td><td></td></tr></table></details>
+
+<h3>Layer 2 — extracted_data vs generator ground truth</h3>
+<p class="sub">Match rules: exact string; numeric within 0.01; boolean equality; null-agreement
+(expected null requires actual null — a value where truth says null counts as <i>fabricated</i>);
+prefix (either side starts with the other, minimum 6 chars — covers shortened vendor names such as
+<code>Demo Title Co</code> vs the printed <code>Demo Title Co (fictional)</code>).
+recall = matched / (matched + missing + mismatch) = 55 / 55;
+precision = matched / (matched + mismatch + extra + fabricated) = 55 / 55.</p>
+<details><summary>demo-ca-tds.pdf — matched 9/9 (missing 0, mismatch 0, fabricated 0, extra 0)</summary><table><tr><th>Field</th><th>Expected (generator)</th><th>Actual (extracted_data)</th><th>Match rule</th></tr><tr class="okrow"><td><code>property_address</code></td><td>&quot;123 Main St, Pasadena, CA 91101&quot;</td><td>&quot;123 Main St, Pasadena, CA 91101&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>apn</code></td><td>&quot;5842-018-024&quot;</td><td>&quot;5842-018-024&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>seller_name</code></td><td>&quot;Jane Seller&quot;</td><td>&quot;Jane Seller&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>document_date</code></td><td>null</td><td>null</td><td>null-agrees</td></tr><tr class="okrow"><td><code>listing_agent_name</code></td><td>null</td><td>null</td><td>null-agrees</td></tr><tr class="okrow"><td><code>brokerage_name</code></td><td>null</td><td>null</td><td>null-agrees</td></tr><tr class="okrow"><td><code>signatures_present</code></td><td>true</td><td>true</td><td>boolean</td></tr><tr class="okrow"><td><code>disclosure_signed</code></td><td>true</td><td>true</td><td>boolean</td></tr><tr class="okrow"><td><code>disclosure_date</code></td><td>&quot;2026-09-16&quot;</td><td>&quot;2026-09-16&quot;</td><td>exact</td></tr></table></details><details><summary>demo-ca-spq.pdf — matched 9/9 (missing 0, mismatch 0, fabricated 0, extra 0)</summary><table><tr><th>Field</th><th>Expected (generator)</th><th>Actual (extracted_data)</th><th>Match rule</th></tr><tr class="okrow"><td><code>property_address</code></td><td>&quot;123 Main St, Pasadena, CA 91101&quot;</td><td>&quot;123 Main St, Pasadena, CA 91101&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>apn</code></td><td>&quot;5842-018-024&quot;</td><td>&quot;5842-018-024&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>seller_name</code></td><td>&quot;Jane Seller&quot;</td><td>&quot;Jane Seller&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>document_date</code></td><td>null</td><td>null</td><td>null-agrees</td></tr><tr class="okrow"><td><code>listing_agent_name</code></td><td>null</td><td>null</td><td>null-agrees</td></tr><tr class="okrow"><td><code>brokerage_name</code></td><td>null</td><td>null</td><td>null-agrees</td></tr><tr class="okrow"><td><code>signatures_present</code></td><td>true</td><td>true</td><td>boolean</td></tr><tr class="okrow"><td><code>questionnaire_complete</code></td><td>true</td><td>true</td><td>boolean</td></tr><tr class="okrow"><td><code>completion_date</code></td><td>&quot;2026-09-16&quot;</td><td>&quot;2026-09-16&quot;</td><td>exact</td></tr></table></details><details><summary>demo-listing-agreement.pdf — matched 10/10 (missing 0, mismatch 0, fabricated 0, extra 0)</summary><table><tr><th>Field</th><th>Expected (generator)</th><th>Actual (extracted_data)</th><th>Match rule</th></tr><tr class="okrow"><td><code>property_address</code></td><td>&quot;123 Main St, Pasadena, CA 91101&quot;</td><td>&quot;123 Main St, Pasadena, CA 91101&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>apn</code></td><td>&quot;5842-018-024&quot;</td><td>&quot;5842-018-024&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>seller_name</code></td><td>&quot;Jane Seller&quot;</td><td>&quot;Jane Seller&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>document_date</code></td><td>&quot;2026-09-15&quot;</td><td>&quot;2026-09-15&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>listing_agent_name</code></td><td>&quot;Alex Agent&quot;</td><td>&quot;Alex Agent&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>brokerage_name</code></td><td>&quot;Demo Realty&quot;</td><td>&quot;Demo Realty&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>signatures_present</code></td><td>true</td><td>true</td><td>boolean</td></tr><tr class="okrow"><td><code>listing_price</code></td><td>1250000</td><td>1250000.0</td><td>numeric</td></tr><tr class="okrow"><td><code>listing_start_date</code></td><td>&quot;2026-09-15&quot;</td><td>&quot;2026-09-15&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>listing_end_date</code></td><td>&quot;2027-03-15&quot;</td><td>&quot;2027-03-15&quot;</td><td>exact</td></tr></table></details><details><summary>demo-agent-visual-inspection.pdf — matched 9/9 (missing 0, mismatch 0, fabricated 0, extra 0)</summary><table><tr><th>Field</th><th>Expected (generator)</th><th>Actual (extracted_data)</th><th>Match rule</th></tr><tr class="okrow"><td><code>property_address</code></td><td>&quot;123 Main St, Pasadena, CA 91101&quot;</td><td>&quot;123 Main St, Pasadena, CA 91101&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>apn</code></td><td>&quot;5842-018-024&quot;</td><td>&quot;5842-018-024&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>seller_name</code></td><td>&quot;Jane Seller&quot;</td><td>&quot;Jane Seller&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>document_date</code></td><td>&quot;2026-09-17&quot;</td><td>&quot;2026-09-17&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>listing_agent_name</code></td><td>&quot;Alex Agent&quot;</td><td>&quot;Alex Agent&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>brokerage_name</code></td><td>&quot;Demo Realty&quot;</td><td>&quot;Demo Realty&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>signatures_present</code></td><td>true</td><td>true</td><td>boolean</td></tr><tr class="okrow"><td><code>inspection_date</code></td><td>&quot;2026-09-17&quot;</td><td>&quot;2026-09-17&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>inspection_complete</code></td><td>true</td><td>true</td><td>boolean</td></tr></table></details><details><summary>demo-ca-nhd.pdf — matched 9/9 (missing 0, mismatch 0, fabricated 0, extra 0)</summary><table><tr><th>Field</th><th>Expected (generator)</th><th>Actual (extracted_data)</th><th>Match rule</th></tr><tr class="okrow"><td><code>property_address</code></td><td>&quot;123 Main St, Pasadena, CA 91101&quot;</td><td>&quot;123 Main St, Pasadena, CA 91101&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>apn</code></td><td>&quot;5842-018-024&quot;</td><td>&quot;5842-018-024&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>seller_name</code></td><td>&quot;Jane Seller&quot;</td><td>&quot;Jane Seller&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>document_date</code></td><td>null</td><td>null</td><td>null-agrees</td></tr><tr class="okrow"><td><code>listing_agent_name</code></td><td>&quot;Alex Agent&quot;</td><td>&quot;Alex Agent&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>brokerage_name</code></td><td>&quot;Demo Realty&quot;</td><td>&quot;Demo Realty&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>signatures_present</code></td><td>true</td><td>true</td><td>boolean</td></tr><tr class="okrow"><td><code>report_date</code></td><td>&quot;2026-09-14&quot;</td><td>&quot;2026-09-14&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>hazards_disclosed</code></td><td>true</td><td>true</td><td>boolean</td></tr></table></details><details><summary>demo-prelim-title-report.pdf — matched 9/9 (missing 0, mismatch 0, fabricated 0, extra 0)</summary><table><tr><th>Field</th><th>Expected (generator)</th><th>Actual (extracted_data)</th><th>Match rule</th></tr><tr class="okrow"><td><code>property_address</code></td><td>&quot;123 Main St, Pasadena, CA 91101&quot;</td><td>&quot;123 Main St, Pasadena, CA 91101&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>apn</code></td><td>&quot;5842-018-024&quot;</td><td>&quot;5842-018-024&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>seller_name</code></td><td>&quot;Jane Seller&quot;</td><td>&quot;Jane Seller&quot;</td><td>exact</td></tr><tr class="okrow"><td><code>document_date</code></td><td>null</td><td>null</td><td>null-agrees</td></tr><tr class="okrow"><td><code>listing_agent_name</code></td><td>null</td><td>null</td><td>null-agrees</td></tr><tr class="okrow"><td><code>brokerage_name</code></td><td>null</td><td>null</td><td>null-agrees</td></tr><tr class="okrow"><td><code>signatures_present</code></td><td>null</td><td>null</td><td>null-agrees</td></tr><tr class="okrow"><td><code>title_company</code></td><td>&quot;Demo Title Co (fictional)&quot;</td><td>&quot;Demo Title Co&quot;</td><td>prefix</td></tr><tr class="okrow"><td><code>report_date</code></td><td>&quot;2026-09-18&quot;</td><td>&quot;2026-09-18&quot;</td><td>exact</td></tr></table></details>
+
+<h3>Normalize — normalized_data (stage 3 API response)</h3>
+<p class="sub">The engine's normalization maps only the five shared fact fields
+(<code>property_address</code>, <code>apn</code>, <code>seller_name</code>, <code>listing_agent_name</code>,
+<code>document_date</code>); other extracted fields never appear in <code>normalized_data</code>.
+Totals: 30 agree, 0 missing, 0 differ, 0 extra.</p>
+<details><summary>demo-ca-tds.pdf</summary><table><tr><th>Shared field</th><th>Expected normalized</th><th>API normalized_data</th><th>Rule</th></tr><tr class="okrow"><td><code>property_address</code></td><td>123 main st pasadena ca 91101</td><td>123 main st pasadena ca 91101</td><td>exact</td></tr><tr class="okrow"><td><code>apn</code></td><td>5842018024</td><td>5842018024</td><td>exact</td></tr><tr class="okrow"><td><code>seller_name</code></td><td>jane seller</td><td>jane seller</td><td>exact</td></tr><tr class="okrow"><td><code>listing_agent_name</code></td><td>(absent)</td><td>(absent)</td><td>absent-in-both</td></tr><tr class="okrow"><td><code>document_date</code></td><td>(absent)</td><td>(absent)</td><td>absent-in-both</td></tr></table></details><details><summary>demo-ca-spq.pdf</summary><table><tr><th>Shared field</th><th>Expected normalized</th><th>API normalized_data</th><th>Rule</th></tr><tr class="okrow"><td><code>property_address</code></td><td>123 main st pasadena ca 91101</td><td>123 main st pasadena ca 91101</td><td>exact</td></tr><tr class="okrow"><td><code>apn</code></td><td>5842018024</td><td>5842018024</td><td>exact</td></tr><tr class="okrow"><td><code>seller_name</code></td><td>jane seller</td><td>jane seller</td><td>exact</td></tr><tr class="okrow"><td><code>listing_agent_name</code></td><td>(absent)</td><td>(absent)</td><td>absent-in-both</td></tr><tr class="okrow"><td><code>document_date</code></td><td>(absent)</td><td>(absent)</td><td>absent-in-both</td></tr></table></details><details><summary>demo-listing-agreement.pdf</summary><table><tr><th>Shared field</th><th>Expected normalized</th><th>API normalized_data</th><th>Rule</th></tr><tr class="okrow"><td><code>property_address</code></td><td>123 main st pasadena ca 91101</td><td>123 main st pasadena ca 91101</td><td>exact</td></tr><tr class="okrow"><td><code>apn</code></td><td>5842018024</td><td>5842018024</td><td>exact</td></tr><tr class="okrow"><td><code>seller_name</code></td><td>jane seller</td><td>jane seller</td><td>exact</td></tr><tr class="okrow"><td><code>listing_agent_name</code></td><td>alex agent</td><td>alex agent</td><td>exact</td></tr><tr class="okrow"><td><code>document_date</code></td><td>2026-09-15</td><td>2026-09-15</td><td>exact</td></tr></table></details><details><summary>demo-agent-visual-inspection.pdf</summary><table><tr><th>Shared field</th><th>Expected normalized</th><th>API normalized_data</th><th>Rule</th></tr><tr class="okrow"><td><code>property_address</code></td><td>123 main st pasadena ca 91101</td><td>123 main st pasadena ca 91101</td><td>exact</td></tr><tr class="okrow"><td><code>apn</code></td><td>5842018024</td><td>5842018024</td><td>exact</td></tr><tr class="okrow"><td><code>seller_name</code></td><td>jane seller</td><td>jane seller</td><td>exact</td></tr><tr class="okrow"><td><code>listing_agent_name</code></td><td>alex agent</td><td>alex agent</td><td>exact</td></tr><tr class="okrow"><td><code>document_date</code></td><td>2026-09-17</td><td>2026-09-17</td><td>exact</td></tr></table></details><details><summary>demo-ca-nhd.pdf</summary><table><tr><th>Shared field</th><th>Expected normalized</th><th>API normalized_data</th><th>Rule</th></tr><tr class="okrow"><td><code>property_address</code></td><td>123 main st pasadena ca 91101</td><td>123 main st pasadena ca 91101</td><td>exact</td></tr><tr class="okrow"><td><code>apn</code></td><td>5842018024</td><td>5842018024</td><td>exact</td></tr><tr class="okrow"><td><code>seller_name</code></td><td>jane seller</td><td>jane seller</td><td>exact</td></tr><tr class="okrow"><td><code>listing_agent_name</code></td><td>alex agent</td><td>alex agent</td><td>exact</td></tr><tr class="okrow"><td><code>document_date</code></td><td>(absent)</td><td>(absent)</td><td>absent-in-both</td></tr></table></details><details><summary>demo-prelim-title-report.pdf</summary><table><tr><th>Shared field</th><th>Expected normalized</th><th>API normalized_data</th><th>Rule</th></tr><tr class="okrow"><td><code>property_address</code></td><td>123 main st pasadena ca 91101</td><td>123 main st pasadena ca 91101</td><td>exact</td></tr><tr class="okrow"><td><code>apn</code></td><td>5842018024</td><td>5842018024</td><td>exact</td></tr><tr class="okrow"><td><code>seller_name</code></td><td>jane seller</td><td>jane seller</td><td>exact</td></tr><tr class="okrow"><td><code>listing_agent_name</code></td><td>(absent)</td><td>(absent)</td><td>absent-in-both</td></tr><tr class="okrow"><td><code>document_date</code></td><td>(absent)</td><td>(absent)</td><td>absent-in-both</td></tr></table></details>
+</section>
+
+<section class="card" id="findings">
+<h2>Findings</h2>
+<table><tr><th>Id</th><th>Severity</th><th>Title</th><th>Evidence (captured response)</th><th>Impact</th></tr><tr><td><code>F1</code></td><td>info (engine API shape)</td><td>Verdict response carries no dimension fields — completeness/consistency/compliance must be derived from three other endpoints</td><td>POST /verdict before and after verification returned only {verdict, reason, blocking_pending, blocking_exceptions, pending_verification, advisory} (captured in captures.json pass_b.verdict_before / verdict_after). The report&#x27;s dimension panels are labeled DERIVED and join GET readout (states), POST detect-exceptions (R1/R2/R3) and the catalog rule table.</td><td>Any dashboard showing the product&#x27;s three stated dimensions needs 3+ API reads per file; there is no single readiness-shape payload.</td></tr><tr><td><code>F2</code></td><td>info (engine API shape)</td><td>Engine has no severity concept on findings</td><td>POST detect-exceptions returned 0 conflicts / 0 missing_signatures / 0 overdue, and each finding shape carries only field/values/document_ids/reason-style strings (schemas.py ConflictFinding/MissingSignatureFinding/OverdueRequirementFinding). No severity or confidence field exists on any finding.</td><td>Triage UIs must invent their own severity mapping; the report&#x27;s Severity column is report-authored, not engine output.</td></tr><tr><td><code>F3</code></td><td>info (engine API shape)</td><td>Requirement-to-document resolution is only observable through review-queue state_reason, not a per-document endpoint</td><td>After reconcile, GET review-queue pending_verification items each carried state_reason &#x27;Matched document #&lt;id&gt; (&lt;TYPE&gt;)&#x27; for all 6 received requirements (pass_b.queue_mid); GET /documents/{id} exposes no back-reference to the requirement it satisfied.</td><td>Auditing why a document counted toward a requirement requires reading the whole review queue; there is no doc-centric resolution view.</td></tr><tr><td><code>F4</code></td><td>info (engine API shape)</td><td>Requirement.owner is never populated — owner accountability is not engine data</td><td>Readout requirements (pass_b.readout_mid / readout_after) expose only requirement_key/type/status/state/overdue; no owner field exists in ReadoutRequirement. The report&#x27;s Owner column is labeled DERIVED and mapped from requirement type + source.</td><td>Work-routing/ownership views cannot be built from the API today; adding owner to the catalog rule would be the natural fix.</td></tr><tr><td><code>F5</code></td><td>semantics (documented behavior, easy to misread)</td><td>Verdict pending_verification (5 keys) disagrees with review-queue pending_verification bucket (6 items) by design</td><td>Before verification: verdict.pending_verification = [agent_visual_inspection, ca_nhd, ca_spq, ca_tds, listing_agreement] (blocking statuses only) while the review-queue bucket held 6 items — the queue includes prelim_title_report (RECOMMENDED), which the verdict instead lists under advisory. Captured in pass_b.verdict_before vs pass_b.queue_before.</td><td>Consumers reconciling the two lists will see a 1-item gap whenever a non-blocking requirement has evidence; not a bug, but an undocumented-looking semantics trap.</td></tr><tr><td><code>F6</code></td><td>tooling (this report&#x27;s runner, not the engine)</td><td>Attempt 1 of the journey run was aborted by a runner bug after all stages completed; Pass B was re-measured under a fresh idempotency key</td><td>run_journey.py crashed with KeyError &#x27;w&#x27; while scoring (a forbid_win ground-truth check declared an end-anchor instead of a width). Attempt 1 had already verified all 6 requirements on listing file 17 (idempotency key e2e-journey-2026-10-07-passB), which would have made a replayed &#x27;verdict before&#x27; show a post-verification state. The measured run therefore used e2e-journey-2026-10-07-passB-attempt2 (listing file 18); the Pass A key was reused because Pass A never verifies and file 16&#x27;s state is naturally pre-verification.</td><td>No engine impact. The captures on this page are entirely from the attempt-2 run; attempt 1 left listing files 16 (passA) and 17 (passB, verified) in the local demo database.</td></tr></table>
+<h3>Watchlist vs observed</h3>
+<table><tr><th>Id</th><th>Hypothesis</th><th>Observed</th><th>Verdict</th></tr><tr class="okrow"><td><code>W1</code></td><td>Verdict is NOT_READY before verification (6 blocking PENDING keys + advisory prelim_title_report)</td><td>NOT_READY — blocking_pending = the same 6 missing keys, pending_verification = 5 blocking RECEIVED keys, advisory = [prelim_title_report]</td><td>confirmed</td></tr><tr class="okrow"><td><code>W2</code></td><td>Verdict stays NOT_READY after verifying all 6 received requirements (blocking_pending unchanged, pending_verification and advisory empty)</td><td>NOT_READY — reason &#x27;Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory.&#x27;; pending_verification [] and advisory []</td><td>confirmed</td></tr><tr class="okrow"><td><code>W3</code></td><td>12 requirements fire from CA catalog v1 (year_built 1968, hoa true, solar true); 6 RECEIVED after reconcile, 6 PENDING remain</td><td>12 generated; reconcile evidence_created=6, moved_to_received=6, unmet=6 (agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory), unmatched=[]</td><td>confirmed</td></tr><tr class="okrow"><td><code>W4</code></td><td>Pass A: n8n webhook returns 200 with final readout; one new execution with status success</td><td>HTTP 200 in 1754 ms; new execution #1709 status success (14:06:23–14:06:25); readout verdict NOT_READY with queue pending_verification=6 and all other buckets empty</td><td>confirmed</td></tr><tr class="okrow"><td><code>W5</code></td><td>Content-hash dedup: identical re-upload returns 200 with the same document_id; server content_hash equals local sha256 for all 6</td><td>dedup re-upload HTTP 200, document_id 99 = first upload id; sha256 == content_hash 6/6</td><td>confirmed</td></tr><tr class="okrow"><td><code>W6</code></td><td>Detect-exceptions reports zero conflicts/missing-signatures/overdue (all normalized facts agree; signatures_present is True or None, and None means unknown not unsigned)</td><td>conflicts 0, missing_signatures 0, overdue 0, exceptions_raised 0 — identical before and after verification</td><td>confirmed</td></tr><tr class="okrow"><td><code>W7</code></td><td>Layer-1 text fidelity: all 331 ground-truth checks pass against the pypdf text of the exact uploaded bytes</td><td>331/331 passed (tp 328 positive checks + 3 passed negative assertions, fn 0, fp 0) across all six documents</td><td>confirmed</td></tr><tr class="okrow"><td><code>W8</code></td><td>Layer-2 extraction: all expected fields match, with prelim title_company matching via the prefix rule (extractor &#x27;Demo Title Co&#x27; vs printed &#x27;Demo Title Co (fictional)&#x27;)</td><td>55/55 matched — 33 exact, 11 null-agrees, 9 boolean, 1 numeric, 1 prefix (title_company); 0 missing, 0 mismatch, 0 fabricated, 0 extra</td><td>confirmed</td></tr><tr class="okrow"><td><code>W9</code></td><td>Classification returns the expected type for all 6 documents at mock-profile confidence</td><td>6/6 correct types, confidence 0.94–0.96</td><td>confirmed</td></tr><tr class="okrow"><td><code>W10</code></td><td>Normalization: normalized_data carries exactly the shared-fact cells ground truth expects (engine maps only the 5 shared fields)</td><td>30/30 cells agree (23 expected non-null + 7 absent-in-both), 0 missing, 0 mismatch, 0 extra</td><td>confirmed</td></tr></table>
+<h3>Notes</h3><ul><li>Attempt 1 (aborted by the runner bug in F6) used idempotency keys e2e-journey-2026-10-07-passA and e2e-journey-2026-10-07-passB and left listing files 16 and 17 in the local demo database; every number on this report comes from the attempt-2 captures (Pass A replayed under its original key, Pass B under e2e-journey-2026-10-07-passB-attempt2, listing file 18).</li><li>n8n&#x27;s REST executions API returns 401 without N8N_API_KEY, so execution outcome was probed by reading execution_entity from /home/node/.n8n/database.sqlite inside the n8n container (docker exec, sqlite readOnly) — probe host and candidate log are in captures.json pass_a.</li><li>The container&#x27;s effective settings are llm_provider=mock, llm_prompt_version=v2, llm_model=gpt-6-luna — the model id is an inherited compose env default that the mock provider never calls.</li><li>Pre-reconcile review-queue showed all 6 documents unmatched with reason no_evidence and zero property_mismatch, confirming property identity resolution passed for every document.</li><li>Pass A total webhook round-trip was 1754 ms for the full 6-document orchestrated journey (upload -&gt; classify -&gt; extract per document plus reconcile/detect/verdict/readout).</li></ul>
+</section>
+<footer class="foot">Every request/response body on this page is read from
+<code>captures.json</code>, captured live from the local stack during this run. Panels labeled DERIVED are
+computed by <code>run_journey.py</code> from those captures plus the repository's catalog source; they are not
+engine API outputs. Layer-1 truth comes from <code>ground_truth.json</code>, authored from the fixture PDFs'
+text layer before the run.</footer>
+</main></body></html>

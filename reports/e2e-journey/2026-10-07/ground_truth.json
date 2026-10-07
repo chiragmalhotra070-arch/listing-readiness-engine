@@ -1,0 +1,1974 @@
+{
+  "_meta": {
+    "purpose": "Ground truth for the 2026-10-07 e2e journey extraction scorecard. Layer 1 = text-fidelity checks evaluated against pypdf text extracted from the exact uploaded bytes (same fixtures, same host pypdf). Layer 2 (layer2/normalized) = expected journey extraction outputs from the generator's completed-document constants.",
+    "check_types": {
+      "presence": "needle must occur in normalized text",
+      "assoc": "needle must occur within w chars after anchor occurrence",
+      "pre": "needle must occur with exact prefix p (number line) immediately before it",
+      "forbid_win": "regex rx must NOT match inside window (from anchor, delimited by end anchor or w chars); strip removes the printed Yes/No label pair before testing"
+    },
+    "authored_from": "pypdf dumps of demo_documents/completed/*.pdf (host .venv pypdf) cross-checked against demo_documents/generate_demo_documents.py constants (ADDRESS, APN, SELLER, AGENT, BROKERAGE, dates, LIST_PRICE)"
+  },
+  "docs": {
+    "demo-ca-tds.pdf": {
+      "fill_class": "seller-filled (messy hand-completed)",
+      "checks": [
+        {
+          "id": "tds.marker",
+          "t": "presence",
+          "n": "FICTIONAL TRAINING DATA"
+        },
+        {
+          "id": "tds.title",
+          "t": "presence",
+          "n": "Transfer Disclosure Statement"
+        },
+        {
+          "id": "tds.disclosure_date",
+          "t": "assoc",
+          "a": "Disclosure date:",
+          "n": "2026-09-16",
+          "w": 30
+        },
+        {
+          "id": "tds.address",
+          "t": "assoc",
+          "a": "Property address:",
+          "n": "123 Main St, Pasadena, CA 91101",
+          "w": 60
+        },
+        {
+          "id": "tds.apn",
+          "t": "assoc",
+          "a": "APN (Assessor's Parcel Number):",
+          "n": "5842-018-024",
+          "w": 60
+        },
+        {
+          "id": "tds.seller",
+          "t": "assoc",
+          "a": "Seller:",
+          "n": "Jane Seller",
+          "w": 40
+        },
+        {
+          "id": "tds.year_built",
+          "t": "assoc",
+          "a": "Year built:",
+          "n": "1968",
+          "w": 20
+        },
+        {
+          "id": "tds.parties",
+          "t": "presence",
+          "n": "Parties: seller Jane Seller"
+        },
+        {
+          "id": "tds.secA",
+          "t": "presence",
+          "n": "Section A — Seller's knowledge of the property (items 1–40)"
+        },
+        {
+          "id": "tds.a01",
+          "t": "presence",
+          "n": "1. Roof leaks"
+        },
+        {
+          "id": "tds.a02",
+          "t": "presence",
+          "n": "2. Roof age / remaining warranty"
+        },
+        {
+          "id": "tds.a03",
+          "t": "presence",
+          "n": "3. Attic ventilation or fan issues"
+        },
+        {
+          "id": "tds.a04",
+          "t": "presence",
+          "n": "4. Chimney or flue defects"
+        },
+        {
+          "id": "tds.a05",
+          "t": "presence",
+          "n": "5. Walls out of plumb / cracks"
+        },
+        {
+          "id": "tds.a06",
+          "t": "presence",
+          "n": "6. Foundation cracks or settlement"
+        },
+        {
+          "id": "tds.a07",
+          "t": "presence",
+          "n": "7. Active or past pests (termites)"
+        },
+        {
+          "id": "tds.a08",
+          "t": "presence",
+          "n": "8. Water penetration in basement"
+        },
+        {
+          "id": "tds.a09",
+          "t": "presence",
+          "n": "9. Slab leaks known to seller"
+        },
+        {
+          "id": "tds.a10",
+          "t": "presence",
+          "n": "10. Water heater leaking / age"
+        },
+        {
+          "id": "tds.a11",
+          "t": "presence",
+          "n": "11. Sewer or drain backups"
+        },
+        {
+          "id": "tds.a12",
+          "t": "presence",
+          "n": "12. Well or septic systems"
+        },
+        {
+          "id": "tds.a13",
+          "t": "presence",
+          "n": "13. Water pressure problems"
+        },
+        {
+          "id": "tds.a14",
+          "t": "presence",
+          "n": "14. Known plumbing leaks"
+        },
+        {
+          "id": "tds.a15",
+          "t": "presence",
+          "n": "15. Electrical panel / fuse box"
+        },
+        {
+          "id": "tds.a16",
+          "t": "presence",
+          "n": "16. Outlets not grounded / dead"
+        },
+        {
+          "id": "tds.a17",
+          "t": "presence",
+          "n": "17. Aluminum or knob-and-tube wiring"
+        },
+        {
+          "id": "tds.a18",
+          "t": "presence",
+          "n": "18. Known electrical hazards"
+        },
+        {
+          "id": "tds.a19",
+          "t": "presence",
+          "n": "19. Heating system defects"
+        },
+        {
+          "id": "tds.a20",
+          "t": "presence",
+          "n": "20. Cooling system defects"
+        },
+        {
+          "id": "tds.a21",
+          "t": "presence",
+          "n": "21. Ductwork or ventilation issues"
+        },
+        {
+          "id": "tds.a22",
+          "t": "presence",
+          "n": "22. Fireplace or wood stove use"
+        },
+        {
+          "id": "tds.a23",
+          "t": "presence",
+          "n": "23. Appliances included but failing"
+        },
+        {
+          "id": "tds.a24",
+          "t": "presence",
+          "n": "24. Garage door / door defects"
+        },
+        {
+          "id": "tds.a25",
+          "t": "presence",
+          "n": "25. Pool / spa equipment defects"
+        },
+        {
+          "id": "tds.a26",
+          "t": "presence",
+          "n": "26. Pool barrier / gate compliance"
+        },
+        {
+          "id": "tds.a27",
+          "t": "presence",
+          "n": "27. Retaining wall defects"
+        },
+        {
+          "id": "tds.a28",
+          "t": "presence",
+          "n": "28. Fence or boundary disputes"
+        },
+        {
+          "id": "tds.a29",
+          "t": "presence",
+          "n": "29. Driveway or walkway cracks"
+        },
+        {
+          "id": "tds.a30",
+          "t": "presence",
+          "n": "30. Unpermitted work / additions"
+        },
+        {
+          "id": "tds.a31",
+          "t": "presence",
+          "n": "31. Incomplete construction work"
+        },
+        {
+          "id": "tds.a32",
+          "t": "presence",
+          "n": "32. Smoke / carbon monoxide alarms"
+        },
+        {
+          "id": "tds.a33",
+          "t": "presence",
+          "n": "33. Asbestos-containing materials"
+        },
+        {
+          "id": "tds.a34",
+          "t": "presence",
+          "n": "34. Lead-based paint (pre-1978)"
+        },
+        {
+          "id": "tds.a35",
+          "t": "presence",
+          "n": "35. Mold or chronic moisture"
+        },
+        {
+          "id": "tds.a36",
+          "t": "presence",
+          "n": "36. Radon or soil gas concerns"
+        },
+        {
+          "id": "tds.a37",
+          "t": "presence",
+          "n": "37. Earthquake / fault proximity"
+        },
+        {
+          "id": "tds.a38",
+          "t": "presence",
+          "n": "38. Flood or wildfire exposure"
+        },
+        {
+          "id": "tds.a39",
+          "t": "presence",
+          "n": "39. Nuisances or neighbor issues"
+        },
+        {
+          "id": "tds.a40",
+          "t": "presence",
+          "n": "40. Other material defects"
+        },
+        {
+          "id": "tds.secB",
+          "t": "presence",
+          "n": "Section B — Known defects and repairs (items 1–16)"
+        },
+        {
+          "id": "tds.b01",
+          "t": "presence",
+          "n": "B1. Are you aware of any leaks in the roof, walls, or ceiling?"
+        },
+        {
+          "id": "tds.b02",
+          "t": "presence",
+          "n": "B2. Has any part of the plumbing been repaired or replaced?"
+        },
+        {
+          "id": "tds.b03",
+          "t": "presence",
+          "n": "B3. Are you aware of any electrical problems?"
+        },
+        {
+          "id": "tds.b04",
+          "t": "presence",
+          "n": "B4. Has the heating or cooling system been serviced or repaired?"
+        },
+        {
+          "id": "tds.b05",
+          "t": "presence",
+          "n": "B5. Are you aware of any termite or wood-destroying pest damage?"
+        },
+        {
+          "id": "tds.b06",
+          "t": "presence",
+          "n": "B6. Has the property ever been fumigated or tented?"
+        },
+        {
+          "id": "tds.b07",
+          "t": "presence",
+          "n": "B7. Are you aware of cracks in the foundation or slab?"
+        },
+        {
+          "id": "tds.b08",
+          "t": "presence",
+          "n": "B8. Any unpermitted work you are aware of?"
+        },
+        {
+          "id": "tds.b09",
+          "t": "presence",
+          "n": "B9. Any disputes about fences, walls, or boundaries?"
+        },
+        {
+          "id": "tds.b10",
+          "t": "presence",
+          "n": "B10. Any insurance claims in the last five years?"
+        },
+        {
+          "id": "tds.b11",
+          "t": "presence",
+          "n": "B11. Any flooding, storm, or water damage?"
+        },
+        {
+          "id": "tds.b12",
+          "t": "presence",
+          "n": "B12. Any mold, mildew, or chronic moisture problems?"
+        },
+        {
+          "id": "tds.b13",
+          "t": "presence",
+          "n": "B13. Any known problems with appliances being left?"
+        },
+        {
+          "id": "tds.b14",
+          "t": "presence",
+          "n": "B14. Any planned special assessments you know of?"
+        },
+        {
+          "id": "tds.b15",
+          "t": "presence",
+          "n": "B15. Any restrictions on use you are aware of?"
+        },
+        {
+          "id": "tds.b16",
+          "t": "presence",
+          "n": "B16. Any other material fact a buyer should know?"
+        },
+        {
+          "id": "tds.b02.pen",
+          "t": "assoc",
+          "a": "B2. Has any part of the plumbing been repaired or replaced?",
+          "n": "water heater leaking at base — replaced 2022, receipt on file",
+          "w": 220
+        },
+        {
+          "id": "tds.b10.correction",
+          "t": "assoc",
+          "a": "B10. Any insurance claims in the last five years?",
+          "n": "corrected: NO",
+          "w": 300
+        },
+        {
+          "id": "tds.b10.correction_detail",
+          "t": "assoc",
+          "a": "B10. Any insurance claims in the last five years?",
+          "n": "misread item — claim closed 2019",
+          "w": 320
+        },
+        {
+          "id": "tds.b10.no_struck_yes",
+          "t": "forbid_win",
+          "a": "B10. Any insurance claims",
+          "end": "B11. Any flooding",
+          "strip": "\nYes\nNo\n",
+          "rx": "(?<![A-Za-z])Yes(?![A-Za-z])",
+          "note": "after removing the printed Yes/No label pair from the B10 window, no uncorrected affirmative answer may remain — the struck Yes must not extract as the answer"
+        },
+        {
+          "id": "tds.secC",
+          "t": "presence",
+          "n": "Section C — Inspection-related questions (items 1–16)"
+        },
+        {
+          "id": "tds.c01",
+          "t": "presence",
+          "n": "C1. Is the seller aware of a need for roof replacement?"
+        },
+        {
+          "id": "tds.c02",
+          "t": "presence",
+          "n": "C2. Is the seller aware of foundation movement?"
+        },
+        {
+          "id": "tds.c03",
+          "t": "presence",
+          "n": "C3. Is the seller aware of plumbing repairs needed?"
+        },
+        {
+          "id": "tds.c04",
+          "t": "presence",
+          "n": "C4. Is the seller aware of electrical upgrades needed?"
+        },
+        {
+          "id": "tds.c05",
+          "t": "presence",
+          "n": "C5. Is the seller aware of sewer line problems?"
+        },
+        {
+          "id": "tds.c06",
+          "t": "presence",
+          "n": "C6. Is the seller aware of drainage or grading issues?"
+        },
+        {
+          "id": "tds.c07",
+          "t": "presence",
+          "n": "C7. Is the seller aware of asbestos in siding or tiles?"
+        },
+        {
+          "id": "tds.c08",
+          "t": "presence",
+          "n": "C8. Is the seller aware of lead paint hazards?"
+        },
+        {
+          "id": "tds.c09",
+          "t": "presence",
+          "n": "C9. Is the seller aware of former methamphetamine use?"
+        },
+        {
+          "id": "tds.c10",
+          "t": "presence",
+          "n": "C10. Is the seller aware of flood-zone or flood history?"
+        },
+        {
+          "id": "tds.c11",
+          "t": "presence",
+          "n": "C11. Is the seller aware of wildfire interface exposure?"
+        },
+        {
+          "id": "tds.c12",
+          "t": "presence",
+          "n": "C12. Is the seller aware of fault or landslide zones?"
+        },
+        {
+          "id": "tds.c13",
+          "t": "presence",
+          "n": "C13. Is the seller aware of noisy or harmful neighbors?"
+        },
+        {
+          "id": "tds.c14",
+          "t": "presence",
+          "n": "C14. Is the seller aware of registry entries required by law?"
+        },
+        {
+          "id": "tds.c15",
+          "t": "presence",
+          "n": "C15. Is the seller aware of mold or indoor air issues?"
+        },
+        {
+          "id": "tds.c16",
+          "t": "presence",
+          "n": "C16. Is the seller aware of anything else material?"
+        },
+        {
+          "id": "tds.secD",
+          "t": "presence",
+          "n": "Section D — Seller certification"
+        },
+        {
+          "id": "tds.sig_seller",
+          "t": "assoc",
+          "a": "Jane Seller\nSeller\nDate:",
+          "n": "2026-09-16",
+          "w": 50
+        },
+        {
+          "id": "tds.marker2",
+          "t": "presence",
+          "n": "Page 3 of 3"
+        }
+      ],
+      "layer2": {
+        "property_address": "123 Main St, Pasadena, CA 91101",
+        "apn": "5842-018-024",
+        "seller_name": "Jane Seller",
+        "document_date": null,
+        "listing_agent_name": null,
+        "brokerage_name": null,
+        "signatures_present": true,
+        "disclosure_signed": true,
+        "disclosure_date": "2026-09-16"
+      },
+      "normalized": {
+        "property_address": "123 main st pasadena ca 91101",
+        "apn": "5842018024",
+        "seller_name": "jane seller"
+      }
+    },
+    "demo-ca-spq.pdf": {
+      "fill_class": "seller-filled (messy hand-completed)",
+      "checks": [
+        {
+          "id": "spq.marker",
+          "t": "presence",
+          "n": "FICTIONAL TRAINING DATA"
+        },
+        {
+          "id": "spq.initials",
+          "t": "presence",
+          "n": "Initials (seller): ____________"
+        },
+        {
+          "id": "spq.title",
+          "t": "presence",
+          "n": "Seller Property Questionnaire"
+        },
+        {
+          "id": "spq.completion_date",
+          "t": "assoc",
+          "a": "Completion date:",
+          "n": "2026-09-16",
+          "w": 30
+        },
+        {
+          "id": "spq.address",
+          "t": "assoc",
+          "a": "Property address:",
+          "n": "123 Main St, Pasadena, CA 91101",
+          "w": 60
+        },
+        {
+          "id": "spq.apn",
+          "t": "assoc",
+          "a": "APN (Assessor's Parcel Number):",
+          "n": "5842-018-024",
+          "w": 60
+        },
+        {
+          "id": "spq.seller",
+          "t": "assoc",
+          "a": "Seller:",
+          "n": "Jane Seller",
+          "w": 40
+        },
+        {
+          "id": "spq.grpA",
+          "t": "presence",
+          "n": "Group A — General property and title"
+        },
+        {
+          "id": "spq.a1",
+          "t": "presence",
+          "n": "A1. Do you know of any defects in the walls, ceiling, or floors?"
+        },
+        {
+          "id": "spq.a2",
+          "t": "presence",
+          "n": "A2. Do you know of any defects in the plumbing or water supply?"
+        },
+        {
+          "id": "spq.a3",
+          "t": "presence",
+          "n": "A3. Do you know of defects in the electrical system?"
+        },
+        {
+          "id": "spq.a4",
+          "t": "presence",
+          "n": "A4. Do you know of defects in the heating or air conditioning?"
+        },
+        {
+          "id": "spq.a5",
+          "t": "presence",
+          "n": "A5. Do you know of defects in the roof or gutters?"
+        },
+        {
+          "id": "spq.a6",
+          "t": "presence",
+          "n": "A6. Do you know of any drainage or grading problems?"
+        },
+        {
+          "id": "spq.a7",
+          "t": "presence",
+          "n": "A7. Is any part of the property subject to a boundary dispute?"
+        },
+        {
+          "id": "spq.a8",
+          "t": "presence",
+          "n": "A8. Do you know of easements not shown in title records?"
+        },
+        {
+          "id": "spq.a2.pen",
+          "t": "assoc",
+          "a": "A2. Do you know of any defects in the plumbing or water supply?",
+          "n": "pier and beam access panel added 2019",
+          "w": 220
+        },
+        {
+          "id": "spq.grpB",
+          "t": "presence",
+          "n": "Group B — Environmental"
+        },
+        {
+          "id": "spq.b1",
+          "t": "presence",
+          "n": "B1. Do you know of asbestos-containing materials on the property?"
+        },
+        {
+          "id": "spq.b2",
+          "t": "presence",
+          "n": "B2. Do you know of lead-based paint hazards (pre-1978 construction)?"
+        },
+        {
+          "id": "spq.b3",
+          "t": "presence",
+          "n": "B3. Do you know of radon or soil-gas concerns?"
+        },
+        {
+          "id": "spq.b4",
+          "t": "presence",
+          "n": "B4. Do you know of an underground storage tank on or near the lot?"
+        },
+        {
+          "id": "spq.b5",
+          "t": "presence",
+          "n": "B5. Do you know of mold or chronic moisture conditions?"
+        },
+        {
+          "id": "spq.b6",
+          "t": "presence",
+          "n": "B6. Do you know of contaminated soil or groundwater?"
+        },
+        {
+          "id": "spq.grpC",
+          "t": "presence",
+          "n": "Group C — Structures and systems"
+        },
+        {
+          "id": "spq.c1",
+          "t": "presence",
+          "n": "C1. Has any part of the structure been repaired after earthquake damage?"
+        },
+        {
+          "id": "spq.c2",
+          "t": "presence",
+          "n": "C2. Are you aware of settlement or foundation movement?"
+        },
+        {
+          "id": "spq.c3",
+          "t": "presence",
+          "n": "C3. Have additions or conversions been made to the property?"
+        },
+        {
+          "id": "spq.c3.pen",
+          "t": "assoc",
+          "a": "C3. Have additions or conversions been made to the property?",
+          "n": "carport converted — city record 2016",
+          "w": 220
+        },
+        {
+          "id": "spq.c4",
+          "t": "presence",
+          "n": "C4. Are you aware of missing or expired permits?"
+        },
+        {
+          "id": "spq.c5",
+          "t": "presence",
+          "n": "C5. Do you know of termite or wood-destroying insect work done?"
+        },
+        {
+          "id": "spq.c6",
+          "t": "presence",
+          "n": "C6. Do you know of solar or battery equipment defects?"
+        },
+        {
+          "id": "spq.c7",
+          "t": "presence",
+          "n": "C7. Do you know of pool or spa compliance issues?"
+        },
+        {
+          "id": "spq.c8",
+          "t": "presence",
+          "n": "C8. Do you know of septic, well, or private road systems here?"
+        },
+        {
+          "id": "spq.grpD",
+          "t": "presence",
+          "n": "Group D — Repairs and alterations (items A–F)"
+        },
+        {
+          "id": "spq.d.pre1974",
+          "t": "presence",
+          "n": "The property was built in 1973 or earlier"
+        },
+        {
+          "id": "spq.dA",
+          "t": "assoc",
+          "a": "A. List repairs you had done in the last five years:",
+          "n": "kitchen rewire 2021 — permit closed",
+          "w": 120
+        },
+        {
+          "id": "spq.dB",
+          "t": "assoc",
+          "a": "B. List alterations or additions:",
+          "n": "sunroom permit 2008",
+          "w": 100
+        },
+        {
+          "id": "spq.dD",
+          "t": "assoc",
+          "a": "D. List appliances or systems replaced:",
+          "n": "roof overlay 2015, water heater 2022",
+          "w": 120
+        },
+        {
+          "id": "spq.dE",
+          "t": "assoc",
+          "a": "E. List repairs paid for by insurance:",
+          "n": "drywall patch after 2023 leak",
+          "w": 100
+        },
+        {
+          "id": "spq.dF",
+          "t": "assoc",
+          "a": "F. List any work with a written warranty:",
+          "n": "HVAC warranty to 2027",
+          "w": 100
+        },
+        {
+          "id": "spq.grpE",
+          "t": "presence",
+          "n": "Group E — Neighborhood and use"
+        },
+        {
+          "id": "spq.e1",
+          "t": "presence",
+          "n": "E1. Do you know of nuisances or neighbor conditions a buyer should know?"
+        },
+        {
+          "id": "spq.e2",
+          "t": "presence",
+          "n": "E2. Do you know of noise, odor, or traffic sources nearby?"
+        },
+        {
+          "id": "spq.e3",
+          "t": "presence",
+          "n": "E3. Do you know of airplanes, trains, or freeways affecting use?"
+        },
+        {
+          "id": "spq.e4",
+          "t": "presence",
+          "n": "E4. Do you know of zoning changes or development plans nearby?"
+        },
+        {
+          "id": "spq.e5",
+          "t": "presence",
+          "n": "E5. Do you know of any rental or occupancy restrictions?"
+        },
+        {
+          "id": "spq.e6",
+          "t": "presence",
+          "n": "E6. Do you know of homeowners-association rules that matter here?"
+        },
+        {
+          "id": "spq.s8",
+          "t": "assoc",
+          "a": "Section 8 — Special topics: litigation and claims",
+          "n": "None known to seller",
+          "w": 700
+        },
+        {
+          "id": "spq.s9",
+          "t": "assoc",
+          "a": "Section 9 — Special topics: leases, occupants and use",
+          "n": "Owner occupied; no leases",
+          "w": 600
+        },
+        {
+          "id": "spq.s10",
+          "t": "presence",
+          "n": "Section 10 — Special topics: disclosures to brokers"
+        },
+        {
+          "id": "spq.s11",
+          "t": "presence",
+          "n": "Section 11 — Acknowledgment"
+        },
+        {
+          "id": "spq.sig",
+          "t": "assoc",
+          "a": "Jane Seller\nSeller\nDate:",
+          "n": "2026-09-16",
+          "w": 50
+        },
+        {
+          "id": "spq.marker2",
+          "t": "presence",
+          "n": "Page 4 of 4"
+        }
+      ],
+      "layer2": {
+        "property_address": "123 Main St, Pasadena, CA 91101",
+        "apn": "5842-018-024",
+        "seller_name": "Jane Seller",
+        "document_date": null,
+        "listing_agent_name": null,
+        "brokerage_name": null,
+        "signatures_present": true,
+        "questionnaire_complete": true,
+        "completion_date": "2026-09-16"
+      },
+      "normalized": {
+        "property_address": "123 main st pasadena ca 91101",
+        "apn": "5842018024",
+        "seller_name": "jane seller"
+      }
+    },
+    "demo-listing-agreement.pdf": {
+      "fill_class": "agent-filled (anchor document, 7 pages)",
+      "checks": [
+        {
+          "id": "rla.marker",
+          "t": "presence",
+          "n": "FICTIONAL TRAINING DATA"
+        },
+        {
+          "id": "rla.title",
+          "t": "presence",
+          "n": "Residential Listing Agreement"
+        },
+        {
+          "id": "rla.doc_date",
+          "t": "assoc",
+          "a": "Doc date:",
+          "n": "2026-09-15",
+          "w": 30
+        },
+        {
+          "id": "rla.address",
+          "t": "assoc",
+          "a": "Property address:",
+          "n": "123 Main St, Pasadena, CA 91101",
+          "w": 60
+        },
+        {
+          "id": "rla.apn",
+          "t": "assoc",
+          "a": "APN (Assessor's Parcel Number):",
+          "n": "5842-018-024",
+          "w": 60
+        },
+        {
+          "id": "rla.seller",
+          "t": "assoc",
+          "a": "Seller:",
+          "n": "Jane Seller",
+          "w": 40
+        },
+        {
+          "id": "rla.price",
+          "t": "assoc",
+          "a": "Listing price:",
+          "n": "$1,250,000",
+          "w": 30
+        },
+        {
+          "id": "rla.effective",
+          "t": "assoc",
+          "a": "Effective date:",
+          "n": "2026-09-15",
+          "w": 30
+        },
+        {
+          "id": "rla.expiration",
+          "t": "assoc",
+          "a": "Expiration of listing:",
+          "n": "2027-03-15",
+          "w": 50
+        },
+        {
+          "id": "rla.ets",
+          "t": "assoc",
+          "a": "Exclusive right to sell:",
+          "n": "Yes",
+          "w": 30
+        },
+        {
+          "id": "rla.grid.prop",
+          "t": "assoc",
+          "a": "Property / APN",
+          "n": "123 Main St, Pasadena, CA 91101 / 5842-018-024",
+          "w": 80
+        },
+        {
+          "id": "rla.grid.seller",
+          "t": "assoc",
+          "a": "Seller\nJane Seller",
+          "n": "Jane Seller",
+          "w": 40
+        },
+        {
+          "id": "rla.grid.agent",
+          "t": "assoc",
+          "a": "Listing agent / broker",
+          "n": "Alex Agent — Demo Realty",
+          "w": 80
+        },
+        {
+          "id": "rla.grid.priceterm",
+          "t": "assoc",
+          "a": "Price / term",
+          "n": "$1,250,000 · 2026-09-15 to 2027-03-15",
+          "w": 80
+        },
+        {
+          "id": "rla.s01",
+          "t": "presence",
+          "n": "1. Grant of exclusive right to sell"
+        },
+        {
+          "id": "rla.s02",
+          "t": "presence",
+          "n": "2. Broker's services"
+        },
+        {
+          "id": "rla.s03",
+          "t": "presence",
+          "n": "3. Seller's principal obligations"
+        },
+        {
+          "id": "rla.s04",
+          "t": "presence",
+          "n": "4. Condition of the Property and disclosures"
+        },
+        {
+          "id": "rla.s05",
+          "t": "presence",
+          "n": "5. Broker compensation"
+        },
+        {
+          "id": "rla.s06",
+          "t": "presence",
+          "n": "6. Multiple listing service participation"
+        },
+        {
+          "id": "rla.s07",
+          "t": "presence",
+          "n": "7. Access, lockbox and showings"
+        },
+        {
+          "id": "rla.s08",
+          "t": "presence",
+          "n": "8. Additional or special provisions"
+        },
+        {
+          "id": "rla.s09",
+          "t": "presence",
+          "n": "9. Protective provisions: title, liens and possession"
+        },
+        {
+          "id": "rla.s10",
+          "t": "presence",
+          "n": "10. Earnest money deposits"
+        },
+        {
+          "id": "rla.s11",
+          "t": "presence",
+          "n": "11. Escrow and closing cooperation"
+        },
+        {
+          "id": "rla.s12",
+          "t": "presence",
+          "n": "12. Mediation and binding arbitration"
+        },
+        {
+          "id": "rla.s13",
+          "t": "presence",
+          "n": "13. Agency disclosure acknowledgment"
+        },
+        {
+          "id": "rla.s14",
+          "t": "presence",
+          "n": "14. Conflict of interest and dual agency"
+        },
+        {
+          "id": "rla.s15",
+          "t": "presence",
+          "n": "15. Reports, records and retention"
+        },
+        {
+          "id": "rla.s16",
+          "t": "presence",
+          "n": "16. Electronic signatures and notices"
+        },
+        {
+          "id": "rla.s17",
+          "t": "presence",
+          "n": "17. Indemnification"
+        },
+        {
+          "id": "rla.s18",
+          "t": "presence",
+          "n": "18. Limits of Broker liability"
+        },
+        {
+          "id": "rla.s19",
+          "t": "presence",
+          "n": "19. Survival and termination"
+        },
+        {
+          "id": "rla.s20",
+          "t": "presence",
+          "n": "20. Miscellaneous"
+        },
+        {
+          "id": "rla.s21",
+          "t": "presence",
+          "n": "21. Entire agreement"
+        },
+        {
+          "id": "rla.closing_stmt",
+          "t": "presence",
+          "n": "Broker's closing statement of compliance"
+        },
+        {
+          "id": "rla.comp_blank_pct",
+          "t": "forbid_win",
+          "a": "5. Broker compensation",
+          "w": 900,
+          "rx": "\\d+(\\.\\d+)?%",
+          "note": "compensation % fields are blank negotiated-later terms — no numeric percent may appear in the Section 5 window"
+        },
+        {
+          "id": "rla.comp_blank_present",
+          "t": "presence",
+          "n": "____% of purchase price, or $____ minimum"
+        },
+        {
+          "id": "rla.contacts.agent",
+          "t": "assoc",
+          "a": "Listing agent",
+          "n": "Alex Agent",
+          "w": 60
+        },
+        {
+          "id": "rla.contacts.tc",
+          "t": "assoc",
+          "a": "Transaction coordinator",
+          "n": "Taylor Coordinator",
+          "w": 60
+        },
+        {
+          "id": "rla.contacts.broker",
+          "t": "assoc",
+          "a": "Broker of record",
+          "n": "Demo Realty",
+          "w": 60
+        },
+        {
+          "id": "rla.contacts.escrow",
+          "t": "assoc",
+          "a": "Preferred escrow",
+          "n": "Demo Escrow",
+          "w": 60
+        },
+        {
+          "id": "rla.sig_block",
+          "t": "assoc",
+          "a": "Signatures",
+          "n": "DRE Lic. #01874567",
+          "w": 500
+        },
+        {
+          "id": "rla.sig_broker_dre",
+          "t": "assoc",
+          "a": "Signatures",
+          "n": "DRE Lic. #01998765",
+          "w": 600
+        },
+        {
+          "id": "rla.sig_seller_date",
+          "t": "assoc",
+          "a": "Jane Seller\nSeller\nDate:",
+          "n": "2026-09-15",
+          "w": 50
+        },
+        {
+          "id": "rla.marker2",
+          "t": "presence",
+          "n": "Page 7 of 7"
+        }
+      ],
+      "layer2": {
+        "property_address": "123 Main St, Pasadena, CA 91101",
+        "apn": "5842-018-024",
+        "seller_name": "Jane Seller",
+        "document_date": "2026-09-15",
+        "listing_agent_name": "Alex Agent",
+        "brokerage_name": "Demo Realty",
+        "signatures_present": true,
+        "listing_price": 1250000,
+        "listing_start_date": "2026-09-15",
+        "listing_end_date": "2027-03-15"
+      },
+      "normalized": {
+        "property_address": "123 main st pasadena ca 91101",
+        "apn": "5842018024",
+        "seller_name": "jane seller",
+        "listing_agent_name": "alex agent",
+        "document_date": "2026-09-15"
+      }
+    },
+    "demo-agent-visual-inspection.pdf": {
+      "fill_class": "agent-filled (agent-signature path)",
+      "checks": [
+        {
+          "id": "avid.marker",
+          "t": "presence",
+          "n": "FICTIONAL TRAINING DATA"
+        },
+        {
+          "id": "avid.title",
+          "t": "presence",
+          "n": "Agent Visual Inspection Disclosure"
+        },
+        {
+          "id": "avid.insp_date_cover",
+          "t": "assoc",
+          "a": "Inspection date:",
+          "n": "2026-09-17",
+          "w": 30
+        },
+        {
+          "id": "avid.address",
+          "t": "assoc",
+          "a": "Property address:",
+          "n": "123 Main St, Pasadena, CA 91101",
+          "w": 60
+        },
+        {
+          "id": "avid.apn",
+          "t": "assoc",
+          "a": "APN (Assessor's Parcel Number):",
+          "n": "5842-018-024",
+          "w": 60
+        },
+        {
+          "id": "avid.seller",
+          "t": "assoc",
+          "a": "Seller:",
+          "n": "Jane Seller",
+          "w": 40
+        },
+        {
+          "id": "avid.weather",
+          "t": "assoc",
+          "a": "Weather / visibility:",
+          "n": "Clear, daylight",
+          "w": 40
+        },
+        {
+          "id": "avid.participants",
+          "t": "assoc",
+          "a": "Participants present:",
+          "n": "Alex Agent, seller",
+          "w": 60
+        },
+        {
+          "id": "avid.row_part1",
+          "t": "presence",
+          "n": "Jane Seller\nProperty owner\nYes"
+        },
+        {
+          "id": "avid.row_part2",
+          "t": "presence",
+          "n": "Alex Agent\nListing agent (observer)\nYes"
+        },
+        {
+          "id": "avid.row_part3",
+          "t": "presence",
+          "n": "(buyer)\nBuyer\nNo"
+        },
+        {
+          "id": "avid.row_part4",
+          "t": "presence",
+          "n": "(buyer's agent)\nCooperating licensee\nNo"
+        },
+        {
+          "id": "avid.table_hdr",
+          "t": "presence",
+          "n": "Area\nItems observed / noted\nCondition noted"
+        },
+        {
+          "id": "avid.area01",
+          "t": "presence",
+          "n": "Exterior — front\nStucco, front walkway, garage door\nServiceable"
+        },
+        {
+          "id": "avid.area02",
+          "t": "presence",
+          "n": "Yard / landscaping\nIrrigation head misaligned at east bed\nMinor defect noted"
+        },
+        {
+          "id": "avid.area03",
+          "t": "presence",
+          "n": "Driveway\nSurface cracking near sidewalk joint\nCosmetic"
+        },
+        {
+          "id": "avid.area04",
+          "t": "presence",
+          "n": "Garage\nWater heater strapped; panel clear\nServiceable"
+        },
+        {
+          "id": "avid.area05",
+          "t": "presence",
+          "n": "Entry / hall\nFlooring intact; smoke alarm present\nServiceable"
+        },
+        {
+          "id": "avid.area06",
+          "t": "presence",
+          "n": "Living room\nCeiling and walls; window operation\nNo defects observed"
+        },
+        {
+          "id": "avid.area07",
+          "t": "presence",
+          "n": "Kitchen\nCabinets, sink, included appliances run\nOperational"
+        },
+        {
+          "id": "avid.area08",
+          "t": "presence",
+          "n": "Dining area\nFixture, windows\nNo defects observed"
+        },
+        {
+          "id": "avid.area09",
+          "t": "presence",
+          "n": "Bedrooms (3)\nClosets, windows, flooring\nNo defects observed"
+        },
+        {
+          "id": "avid.area10",
+          "t": "presence",
+          "n": "Bathrooms (2)\nVents, caulking, toilet stability\nMinor caulk wear"
+        },
+        {
+          "id": "avid.area11",
+          "t": "presence",
+          "n": "Laundry area\nHookups, drain pan\nServiceable"
+        },
+        {
+          "id": "avid.area12",
+          "t": "presence",
+          "n": "Roof (from ground)\nComposition shingles; gutters\nAge visible; no active leak seen"
+        },
+        {
+          "id": "avid.area13",
+          "t": "presence",
+          "n": "Crawlspace access\nNot opened during walk-through\nNot observed"
+        },
+        {
+          "id": "avid.area14",
+          "t": "presence",
+          "n": "Systems (visible only)\nFurnace filter slot; electrical panel\nServiceable"
+        },
+        {
+          "id": "avid.notobs_hdr",
+          "t": "presence",
+          "n": "Not observed during this walk-through"
+        },
+        {
+          "id": "avid.notobs1",
+          "t": "presence",
+          "n": "Hidden structural components"
+        },
+        {
+          "id": "avid.notobs2",
+          "t": "presence",
+          "n": "Under-slab plumbing"
+        },
+        {
+          "id": "avid.notobs3",
+          "t": "presence",
+          "n": "Attic framing (not entered)"
+        },
+        {
+          "id": "avid.notobs4",
+          "t": "presence",
+          "n": "Septic or private systems"
+        },
+        {
+          "id": "avid.notobs5",
+          "t": "presence",
+          "n": "Radon, mold, or lab testing"
+        },
+        {
+          "id": "avid.note1",
+          "t": "assoc",
+          "a": "Notes and follow-up items",
+          "n": "Buyer to order general home inspection and sewer scope.",
+          "w": 600
+        },
+        {
+          "id": "avid.note2",
+          "t": "assoc",
+          "a": "Notes and follow-up items",
+          "n": "Seller to provide roof repair receipt (2015 overlay) before closing.",
+          "w": 700
+        },
+        {
+          "id": "avid.sig_agent",
+          "t": "assoc",
+          "a": "Signatures (in order)",
+          "n": "Alex Agent\nListing agent   DRE Lic. #01874567",
+          "w": 200
+        },
+        {
+          "id": "avid.sig_agent_date",
+          "t": "assoc",
+          "a": "Alex Agent\nListing agent   DRE Lic. #01874567",
+          "n": "2026-09-17",
+          "w": 80
+        },
+        {
+          "id": "avid.sig_seller",
+          "t": "presence",
+          "n": "Jane Seller\nSeller\nDate:\n2026-09-17"
+        },
+        {
+          "id": "avid.sig_buyer_blank",
+          "t": "forbid_win",
+          "a": "Buyer\nDate:",
+          "w": 60,
+          "rx": "\\d{4}-\\d{2}-\\d{2}",
+          "note": "buyer has not signed — no date value may appear in the buyer signature slot"
+        },
+        {
+          "id": "avid.marker2",
+          "t": "presence",
+          "n": "Page 3 of 3"
+        }
+      ],
+      "layer2": {
+        "property_address": "123 Main St, Pasadena, CA 91101",
+        "apn": "5842-018-024",
+        "seller_name": "Jane Seller",
+        "document_date": "2026-09-17",
+        "listing_agent_name": "Alex Agent",
+        "brokerage_name": "Demo Realty",
+        "signatures_present": true,
+        "inspection_date": "2026-09-17",
+        "inspection_complete": true
+      },
+      "normalized": {
+        "property_address": "123 main st pasadena ca 91101",
+        "apn": "5842018024",
+        "seller_name": "jane seller",
+        "listing_agent_name": "alex agent",
+        "document_date": "2026-09-17"
+      }
+    },
+    "demo-ca-nhd.pdf": {
+      "fill_class": "third-party (statement + report pair)",
+      "checks": [
+        {
+          "id": "nhd.marker",
+          "t": "presence",
+          "n": "FICTIONAL TRAINING DATA"
+        },
+        {
+          "id": "nhd.title",
+          "t": "presence",
+          "n": "Natural Hazard Disclosure Report"
+        },
+        {
+          "id": "nhd.report_date",
+          "t": "assoc",
+          "a": "Report date:",
+          "n": "2026-09-14",
+          "w": 30
+        },
+        {
+          "id": "nhd.report_no",
+          "t": "assoc",
+          "a": "Report number:",
+          "n": "NHD-2026-0914-5842",
+          "w": 60
+        },
+        {
+          "id": "nhd.address",
+          "t": "assoc",
+          "a": "Property address:",
+          "n": "123 Main St, Pasadena, CA 91101",
+          "w": 60
+        },
+        {
+          "id": "nhd.apn",
+          "t": "assoc",
+          "a": "APN (Assessor's Parcel Number):",
+          "n": "5842-018-024",
+          "w": 60
+        },
+        {
+          "id": "nhd.seller",
+          "t": "assoc",
+          "a": "Seller:",
+          "n": "Jane Seller",
+          "w": 40
+        },
+        {
+          "id": "nhd.part1",
+          "t": "presence",
+          "n": "Part 1 — Natural hazard disclosure statement"
+        },
+        {
+          "id": "nhd.q_hdr",
+          "t": "presence",
+          "n": "Hazard / zone question\nYes\nNo\nDo not know"
+        },
+        {
+          "id": "nhd.q1",
+          "t": "assoc",
+          "a": "Is the property within an official earthquake fault zone?",
+          "n": "X",
+          "w": 140
+        },
+        {
+          "id": "nhd.q2",
+          "t": "assoc",
+          "a": "Is the property within a seismic hazard (liquefaction or landslide) zone?",
+          "n": "X",
+          "w": 140
+        },
+        {
+          "id": "nhd.q3",
+          "t": "assoc",
+          "a": "Is the property in a special flood hazard area on the FEMA map?",
+          "n": "X",
+          "w": 140
+        },
+        {
+          "id": "nhd.q4",
+          "t": "assoc",
+          "a": "Is the property within a state responsibility wildfire area?",
+          "n": "X",
+          "w": 140
+        },
+        {
+          "id": "nhd.q5",
+          "t": "assoc",
+          "a": "Is the property within a dam inundation zone?",
+          "n": "X",
+          "w": 140
+        },
+        {
+          "id": "nhd.q6",
+          "t": "assoc",
+          "a": "Is the property subject to any other disclosed natural hazard?",
+          "n": "X",
+          "w": 140
+        },
+        {
+          "id": "nhd.stmt_sig_seller",
+          "t": "presence",
+          "n": "Jane Seller\nSeller\nDate:\n2026-09-14"
+        },
+        {
+          "id": "nhd.stmt_sig_agent",
+          "t": "assoc",
+          "a": "Statement signatures",
+          "n": "Alex Agent\nListing agent   DRE Lic. #01874567",
+          "w": 250
+        },
+        {
+          "id": "nhd.part2",
+          "t": "presence",
+          "n": "Part 2 — Natural hazard disclosure report"
+        },
+        {
+          "id": "nhd.prepared_by",
+          "t": "assoc",
+          "a": "Prepared by",
+          "n": "Westline Hazard Reports (synthetic provider)",
+          "w": 80
+        },
+        {
+          "id": "nhd.report_nodate",
+          "t": "assoc",
+          "a": "Report no. / date",
+          "n": "NHD-2026-0914-5842 · 2026-09-14",
+          "w": 80
+        },
+        {
+          "id": "nhd.property_line",
+          "t": "assoc",
+          "a": "Report no. / date",
+          "n": "123 Main St, Pasadena, CA 91101 · APN 5842-018-024",
+          "w": 160
+        },
+        {
+          "id": "nhd.matrix_hdr",
+          "t": "presence",
+          "n": "Zone coverage summary"
+        },
+        {
+          "id": "nhd.mx1",
+          "t": "presence",
+          "n": "Earthquake fault zone (Alquist-Priolo)\nIN\nState geological mapping"
+        },
+        {
+          "id": "nhd.mx2",
+          "t": "presence",
+          "n": "Seismic hazard (liquefaction / landslide)\nIN\nState hazard zones"
+        },
+        {
+          "id": "nhd.mx3",
+          "t": "presence",
+          "n": "Special flood hazard area (FEMA)\nNOT IN\nFIRM panel, current edition"
+        },
+        {
+          "id": "nhd.mx4",
+          "t": "presence",
+          "n": "State responsibility wildfire area\nIN\nState fire authority mapping"
+        },
+        {
+          "id": "nhd.mx5",
+          "t": "presence",
+          "n": "Dam inundation zone\nNOT IN\nState dam safety mapping"
+        },
+        {
+          "id": "nhd.mx6",
+          "t": "presence",
+          "n": "Local natural hazard disclosure ordinance\nAPPLIES\nCity of Pasadena"
+        },
+        {
+          "id": "nhd.consistency",
+          "t": "presence",
+          "n": "seismic zones are reported IN, the flood zone is reported NOT IN"
+        },
+        {
+          "id": "nhd.d1",
+          "t": "presence",
+          "n": "1. Earthquake fault zone — IN"
+        },
+        {
+          "id": "nhd.d2",
+          "t": "presence",
+          "n": "2. Seismic hazard zones — IN"
+        },
+        {
+          "id": "nhd.d3",
+          "t": "presence",
+          "n": "3. Special flood hazard area — NOT IN"
+        },
+        {
+          "id": "nhd.d4",
+          "t": "presence",
+          "n": "4. Wildfire — IN"
+        },
+        {
+          "id": "nhd.d5",
+          "t": "presence",
+          "n": "5. Dam inundation — NOT IN"
+        },
+        {
+          "id": "nhd.d6",
+          "t": "presence",
+          "n": "6. Local disclosure ordinance — APPLIES"
+        },
+        {
+          "id": "nhd.preparer",
+          "t": "presence",
+          "n": "Preparer: Westline Hazard Reports (fictional). Received by: Alex Agent, Demo Realty"
+        },
+        {
+          "id": "nhd.marker2",
+          "t": "presence",
+          "n": "Page 4 of 4"
+        }
+      ],
+      "layer2": {
+        "property_address": "123 Main St, Pasadena, CA 91101",
+        "apn": "5842-018-024",
+        "seller_name": "Jane Seller",
+        "document_date": null,
+        "listing_agent_name": "Alex Agent",
+        "brokerage_name": "Demo Realty",
+        "signatures_present": true,
+        "report_date": "2026-09-14",
+        "hazards_disclosed": true
+      },
+      "normalized": {
+        "property_address": "123 main st pasadena ca 91101",
+        "apn": "5842018024",
+        "seller_name": "jane seller",
+        "listing_agent_name": "alex agent"
+      }
+    },
+    "demo-prelim-title-report.pdf": {
+      "fill_class": "third-party (numbered exceptions, 9 pages)",
+      "checks": [
+        {
+          "id": "pre.marker",
+          "t": "presence",
+          "n": "FICTIONAL TRAINING DATA"
+        },
+        {
+          "id": "pre.title",
+          "t": "presence",
+          "n": "Preliminary Title Report"
+        },
+        {
+          "id": "pre.report_date_cover",
+          "t": "assoc",
+          "a": "Report date:",
+          "n": "2026-09-18",
+          "w": 30
+        },
+        {
+          "id": "pre.underwriter",
+          "t": "assoc",
+          "a": "Underwriter",
+          "n": "Demo Title Co (fictional)",
+          "w": 60
+        },
+        {
+          "id": "pre.report_date_grid",
+          "t": "presence",
+          "n": "Report date\n2026-09-18"
+        },
+        {
+          "id": "pre.effective_date",
+          "t": "presence",
+          "n": "Effective date\n2026-09-18"
+        },
+        {
+          "id": "pre.property",
+          "t": "presence",
+          "n": "Property\n123 Main St, Pasadena, CA 91101"
+        },
+        {
+          "id": "pre.apn_line",
+          "t": "presence",
+          "n": "APN\n5842-018-024"
+        },
+        {
+          "id": "pre.vesting_instrument",
+          "t": "assoc",
+          "a": "Vesting instrument",
+          "n": "Grant Deed from prior owners, recorded 2019, Inst. No. 2019-088123",
+          "w": 140
+        },
+        {
+          "id": "pre.report_type",
+          "t": "assoc",
+          "a": "Report type",
+          "n": "Preliminary — subject to final policy",
+          "w": 80
+        },
+        {
+          "id": "pre.vested_in",
+          "t": "presence",
+          "n": "Vested in\nJane Seller"
+        },
+        {
+          "id": "pre.estate",
+          "t": "presence",
+          "n": "Estate\nFee Simple"
+        },
+        {
+          "id": "pre.legal",
+          "t": "presence",
+          "n": "Lot 24 of Block 7 of Elmwood Vista Tract"
+        },
+        {
+          "id": "pre.req_hdr",
+          "t": "presence",
+          "n": "Requirements\nThe company will require, before issuing a final policy:"
+        },
+        {
+          "id": "pre.req1",
+          "t": "presence",
+          "n": "1. Payment or provision for current taxes"
+        },
+        {
+          "id": "pre.req2",
+          "t": "presence",
+          "n": "2. Reconveyance of the deed of trust recorded"
+        },
+        {
+          "id": "pre.req3",
+          "t": "presence",
+          "n": "3. Payoff or subordination of any mechanic's liens"
+        },
+        {
+          "id": "pre.req4",
+          "t": "presence",
+          "n": "4. A satisfactory judgment and lien search"
+        },
+        {
+          "id": "pre.req5",
+          "t": "presence",
+          "n": "5. Correct vesting deed to the estate"
+        },
+        {
+          "id": "pre.req6",
+          "t": "presence",
+          "n": "6. Receipt showing private sewer lateral status"
+        },
+        {
+          "id": "pre.cont1",
+          "t": "presence",
+          "n": "Owner's affidavit and indemnity\nSigned at closing"
+        },
+        {
+          "id": "pre.cont2",
+          "t": "presence",
+          "n": "Open permits\nClose or bond before policy"
+        },
+        {
+          "id": "pre.cont3",
+          "t": "presence",
+          "n": "Private sewer lateral receipt\nProvide at or before closing"
+        },
+        {
+          "id": "pre.cont4",
+          "t": "presence",
+          "n": "Prorations and payoff figures\nProvided by escrow"
+        },
+        {
+          "id": "pre.b1_hdr",
+          "t": "presence",
+          "n": "Exceptions — Schedule B-I (recorded matters)"
+        },
+        {
+          "id": "pre.bi1",
+          "t": "pre",
+          "n": "Taxes and assessments: a first lien for all taxes",
+          "p": "\n1\n"
+        },
+        {
+          "id": "pre.bi2",
+          "t": "pre",
+          "n": "Deed of trust: recorded in favor of the lender of record",
+          "p": "\n2\n"
+        },
+        {
+          "id": "pre.bi3",
+          "t": "pre",
+          "n": "CC&Rs; recorded against the property",
+          "p": "\n3\n"
+        },
+        {
+          "id": "pre.bi4",
+          "t": "pre",
+          "n": "Utility easements for electricity, gas, water, sewer",
+          "p": "\n4\n"
+        },
+        {
+          "id": "pre.bi5",
+          "t": "pre",
+          "n": "Drainage easement recorded over the rear fifteen feet",
+          "p": "\n5\n"
+        },
+        {
+          "id": "pre.bi6",
+          "t": "pre",
+          "n": "Restrictions shown in the recorded map",
+          "p": "\n6\n"
+        },
+        {
+          "id": "pre.bi7",
+          "t": "pre",
+          "n": "Easement for maintenance of any wall or fence",
+          "p": "\n7\n"
+        },
+        {
+          "id": "pre.bi8",
+          "t": "pre",
+          "n": "Right of any public entity to remove or relocate improvements",
+          "p": "\n8\n"
+        },
+        {
+          "id": "pre.bi9",
+          "t": "pre",
+          "n": "Mechanic's lien rights of persons furnishing labor or material",
+          "p": "\n9\n"
+        },
+        {
+          "id": "pre.bi10",
+          "t": "pre",
+          "n": "Any lease of record shown against the property",
+          "p": "\n10\n"
+        },
+        {
+          "id": "pre.bi11",
+          "t": "pre",
+          "n": "Any recorded solar or energy equipment agreement",
+          "p": "\n11\n"
+        },
+        {
+          "id": "pre.insured_over",
+          "t": "presence",
+          "n": "Matters the company will require to be insured over"
+        },
+        {
+          "id": "pre.note_flood",
+          "t": "presence",
+          "n": "Flood zone\nNot in a special flood hazard area"
+        },
+        {
+          "id": "pre.note_zoning",
+          "t": "presence",
+          "n": "Zoning\nSingle-family residential"
+        },
+        {
+          "id": "pre.note_assess",
+          "t": "presence",
+          "n": "Assessments\nNo open municipal assessment district"
+        },
+        {
+          "id": "pre.note_pp",
+          "t": "presence",
+          "n": "Personal property\nAny leased equipment"
+        },
+        {
+          "id": "pre.note_road",
+          "t": "presence",
+          "n": "Private road / shared access\nNot applicable per recorded records"
+        },
+        {
+          "id": "pre.tax_secured",
+          "t": "presence",
+          "n": "Secured tax year\n2026, first installment paid, second installment due 2026-12-10"
+        },
+        {
+          "id": "pre.tax_direct",
+          "t": "presence",
+          "n": "Direct assessment (landscaping district)\n$0 of record"
+        },
+        {
+          "id": "pre.tax_vineyard",
+          "t": "presence",
+          "n": "Vineyard / special district\nNone identified"
+        },
+        {
+          "id": "pre.tax_melloroos",
+          "t": "presence",
+          "n": "Mello-Roos / community facilities\nNone identified"
+        },
+        {
+          "id": "pre.vest1",
+          "t": "presence",
+          "n": "2019-06-14\nGrant Deed, Inst. 2019-088123\nJane Seller"
+        },
+        {
+          "id": "pre.vest2",
+          "t": "presence",
+          "n": "2019-06-14\nDeed of Trust, Inst. 2019-088124 (to reconvey)\nLender of record"
+        },
+        {
+          "id": "pre.exa_hdr",
+          "t": "presence",
+          "n": "Exhibit A — Standard exceptions"
+        },
+        {
+          "id": "pre.exa1",
+          "t": "pre",
+          "n": "Rights of parties in possession or claims of parties",
+          "p": "\n1\n"
+        },
+        {
+          "id": "pre.exa2",
+          "t": "pre",
+          "n": "Defects, liens, encumbrances, or objections not shown",
+          "p": "\n2\n"
+        },
+        {
+          "id": "pre.exa3",
+          "t": "pre",
+          "n": "Unrecorded easements, paths, or rights that may exist",
+          "p": "\n3\n"
+        },
+        {
+          "id": "pre.exa4",
+          "t": "pre",
+          "n": "Mineral, oil, and gas rights reserved by any prior conveyance",
+          "p": "\n4\n"
+        },
+        {
+          "id": "pre.exa5",
+          "t": "pre",
+          "n": "Any state, federal, or local taxes or assessments not yet due and payable",
+          "p": "\n5\n"
+        },
+        {
+          "id": "pre.exa6",
+          "t": "pre",
+          "n": "Discrepancies, conflicts, or gaps in the chain of title",
+          "p": "\n6\n"
+        },
+        {
+          "id": "pre.exa7",
+          "t": "pre",
+          "n": "Powers of attorney, probate proceedings",
+          "p": "\n7\n"
+        },
+        {
+          "id": "pre.exa8",
+          "t": "pre",
+          "n": "Any rights of redemption not terminated of record",
+          "p": "\n8\n"
+        },
+        {
+          "id": "pre.exa9",
+          "t": "pre",
+          "n": "Building zone or land use restrictions, permits, or violations",
+          "p": "\n9\n"
+        },
+        {
+          "id": "pre.exa10",
+          "t": "pre",
+          "n": "Any engineering or survey matters not disclosed",
+          "p": "\n10\n"
+        },
+        {
+          "id": "pre.cl1",
+          "t": "presence",
+          "n": "Payoff letters ordered\nEscrow"
+        },
+        {
+          "id": "pre.cl2",
+          "t": "presence",
+          "n": "Reconveyance of deed of trust\nLender"
+        },
+        {
+          "id": "pre.cl3",
+          "t": "presence",
+          "n": "Owner's affidavit signed\nSeller"
+        },
+        {
+          "id": "pre.cl4",
+          "t": "presence",
+          "n": "Policy instructions received from lender\nBuyer's lender"
+        },
+        {
+          "id": "pre.marker2",
+          "t": "presence",
+          "n": "Page 9 of 9"
+        }
+      ],
+      "layer2": {
+        "property_address": "123 Main St, Pasadena, CA 91101",
+        "apn": "5842-018-024",
+        "seller_name": "Jane Seller",
+        "document_date": null,
+        "listing_agent_name": null,
+        "brokerage_name": null,
+        "signatures_present": null,
+        "title_company": "Demo Title Co (fictional)",
+        "report_date": "2026-09-18"
+      },
+      "normalized": {
+        "property_address": "123 main st pasadena ca 91101",
+        "apn": "5842018024",
+        "seller_name": "jane seller"
+      }
+    }
+  }
+}

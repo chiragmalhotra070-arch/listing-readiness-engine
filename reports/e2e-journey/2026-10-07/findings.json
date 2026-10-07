@@ -1,0 +1,115 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "info (engine API shape)",
+      "title": "Verdict response carries no dimension fields — completeness/consistency/compliance must be derived from three other endpoints",
+      "evidence": "POST /verdict before and after verification returned only {verdict, reason, blocking_pending, blocking_exceptions, pending_verification, advisory} (captured in captures.json pass_b.verdict_before / verdict_after). The report's dimension panels are labeled DERIVED and join GET readout (states), POST detect-exceptions (R1/R2/R3) and the catalog rule table.",
+      "impact": "Any dashboard showing the product's three stated dimensions needs 3+ API reads per file; there is no single readiness-shape payload."
+    },
+    {
+      "id": "F2",
+      "severity": "info (engine API shape)",
+      "title": "Engine has no severity concept on findings",
+      "evidence": "POST detect-exceptions returned 0 conflicts / 0 missing_signatures / 0 overdue, and each finding shape carries only field/values/document_ids/reason-style strings (schemas.py ConflictFinding/MissingSignatureFinding/OverdueRequirementFinding). No severity or confidence field exists on any finding.",
+      "impact": "Triage UIs must invent their own severity mapping; the report's Severity column is report-authored, not engine output."
+    },
+    {
+      "id": "F3",
+      "severity": "info (engine API shape)",
+      "title": "Requirement-to-document resolution is only observable through review-queue state_reason, not a per-document endpoint",
+      "evidence": "After reconcile, GET review-queue pending_verification items each carried state_reason 'Matched document #<id> (<TYPE>)' for all 6 received requirements (pass_b.queue_mid); GET /documents/{id} exposes no back-reference to the requirement it satisfied.",
+      "impact": "Auditing why a document counted toward a requirement requires reading the whole review queue; there is no doc-centric resolution view."
+    },
+    {
+      "id": "F4",
+      "severity": "info (engine API shape)",
+      "title": "Requirement.owner is never populated — owner accountability is not engine data",
+      "evidence": "Readout requirements (pass_b.readout_mid / readout_after) expose only requirement_key/type/status/state/overdue; no owner field exists in ReadoutRequirement. The report's Owner column is labeled DERIVED and mapped from requirement type + source.",
+      "impact": "Work-routing/ownership views cannot be built from the API today; adding owner to the catalog rule would be the natural fix."
+    },
+    {
+      "id": "F5",
+      "severity": "semantics (documented behavior, easy to misread)",
+      "title": "Verdict pending_verification (5 keys) disagrees with review-queue pending_verification bucket (6 items) by design",
+      "evidence": "Before verification: verdict.pending_verification = [agent_visual_inspection, ca_nhd, ca_spq, ca_tds, listing_agreement] (blocking statuses only) while the review-queue bucket held 6 items — the queue includes prelim_title_report (RECOMMENDED), which the verdict instead lists under advisory. Captured in pass_b.verdict_before vs pass_b.queue_before.",
+      "impact": "Consumers reconciling the two lists will see a 1-item gap whenever a non-blocking requirement has evidence; not a bug, but an undocumented-looking semantics trap."
+    },
+    {
+      "id": "F6",
+      "severity": "tooling (this report's runner, not the engine)",
+      "title": "Attempt 1 of the journey run was aborted by a runner bug after all stages completed; Pass B was re-measured under a fresh idempotency key",
+      "evidence": "run_journey.py crashed with KeyError 'w' while scoring (a forbid_win ground-truth check declared an end-anchor instead of a width). Attempt 1 had already verified all 6 requirements on listing file 17 (idempotency key e2e-journey-2026-10-07-passB), which would have made a replayed 'verdict before' show a post-verification state. The measured run therefore used e2e-journey-2026-10-07-passB-attempt2 (listing file 18); the Pass A key was reused because Pass A never verifies and file 16's state is naturally pre-verification.",
+      "impact": "No engine impact. The captures on this page are entirely from the attempt-2 run; attempt 1 left listing files 16 (passA) and 17 (passB, verified) in the local demo database."
+    }
+  ],
+  "watchlist": [
+    {
+      "id": "W1",
+      "hypothesis": "Verdict is NOT_READY before verification (6 blocking PENDING keys + advisory prelim_title_report)",
+      "actual": "NOT_READY — blocking_pending = the same 6 missing keys, pending_verification = 5 blocking RECEIVED keys, advisory = [prelim_title_report]",
+      "confirmed": true
+    },
+    {
+      "id": "W2",
+      "hypothesis": "Verdict stays NOT_READY after verifying all 6 received requirements (blocking_pending unchanged, pending_verification and advisory empty)",
+      "actual": "NOT_READY — reason 'Not ready — missing: agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory.'; pending_verification [] and advisory []",
+      "confirmed": true
+    },
+    {
+      "id": "W3",
+      "hypothesis": "12 requirements fire from CA catalog v1 (year_built 1968, hoa true, solar true); 6 RECEIVED after reconcile, 6 PENDING remain",
+      "actual": "12 generated; reconcile evidence_created=6, moved_to_received=6, unmet=6 (agency_disclosure, hoa_package, lead_disclosure, seller_advisory, solar_agreement, wcmd_advisory), unmatched=[]",
+      "confirmed": true
+    },
+    {
+      "id": "W4",
+      "hypothesis": "Pass A: n8n webhook returns 200 with final readout; one new execution with status success",
+      "actual": "HTTP 200 in 1754 ms; new execution #1709 status success (14:06:23–14:06:25); readout verdict NOT_READY with queue pending_verification=6 and all other buckets empty",
+      "confirmed": true
+    },
+    {
+      "id": "W5",
+      "hypothesis": "Content-hash dedup: identical re-upload returns 200 with the same document_id; server content_hash equals local sha256 for all 6",
+      "actual": "dedup re-upload HTTP 200, document_id 99 = first upload id; sha256 == content_hash 6/6",
+      "confirmed": true
+    },
+    {
+      "id": "W6",
+      "hypothesis": "Detect-exceptions reports zero conflicts/missing-signatures/overdue (all normalized facts agree; signatures_present is True or None, and None means unknown not unsigned)",
+      "actual": "conflicts 0, missing_signatures 0, overdue 0, exceptions_raised 0 — identical before and after verification",
+      "confirmed": true
+    },
+    {
+      "id": "W7",
+      "hypothesis": "Layer-1 text fidelity: all 331 ground-truth checks pass against the pypdf text of the exact uploaded bytes",
+      "actual": "331/331 passed (tp 328 positive checks + 3 passed negative assertions, fn 0, fp 0) across all six documents",
+      "confirmed": true
+    },
+    {
+      "id": "W8",
+      "hypothesis": "Layer-2 extraction: all expected fields match, with prelim title_company matching via the prefix rule (extractor 'Demo Title Co' vs printed 'Demo Title Co (fictional)')",
+      "actual": "55/55 matched — 33 exact, 11 null-agrees, 9 boolean, 1 numeric, 1 prefix (title_company); 0 missing, 0 mismatch, 0 fabricated, 0 extra",
+      "confirmed": true
+    },
+    {
+      "id": "W9",
+      "hypothesis": "Classification returns the expected type for all 6 documents at mock-profile confidence",
+      "actual": "6/6 correct types, confidence 0.94–0.96",
+      "confirmed": true
+    },
+    {
+      "id": "W10",
+      "hypothesis": "Normalization: normalized_data carries exactly the shared-fact cells ground truth expects (engine maps only the 5 shared fields)",
+      "actual": "30/30 cells agree (23 expected non-null + 7 absent-in-both), 0 missing, 0 mismatch, 0 extra",
+      "confirmed": true
+    }
+  ],
+  "notes": [
+    "Attempt 1 (aborted by the runner bug in F6) used idempotency keys e2e-journey-2026-10-07-passA and e2e-journey-2026-10-07-passB and left listing files 16 and 17 in the local demo database; every number on this report comes from the attempt-2 captures (Pass A replayed under its original key, Pass B under e2e-journey-2026-10-07-passB-attempt2, listing file 18).",
+    "n8n's REST executions API returns 401 without N8N_API_KEY, so execution outcome was probed by reading execution_entity from /home/node/.n8n/database.sqlite inside the n8n container (docker exec, sqlite readOnly) — probe host and candidate log are in captures.json pass_a.",
+    "The container's effective settings are llm_provider=mock, llm_prompt_version=v2, llm_model=gpt-6-luna — the model id is an inherited compose env default that the mock provider never calls.",
+    "Pre-reconcile review-queue showed all 6 documents unmatched with reason no_evidence and zero property_mismatch, confirming property identity resolution passed for every document.",
+    "Pass A total webhook round-trip was 1754 ms for the full 6-document orchestrated journey (upload -> classify -> extract per document plus reconcile/detect/verdict/readout)."
+  ]
+}

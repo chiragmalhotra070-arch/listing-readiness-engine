@@ -2,11 +2,11 @@
   "id": "54mDZXfkhnuJPhlY",
   "name": "Listing Readiness v1",
   "active": false,
-  "versionId": "a730ea93-0799-49f6-9cf3-d7df0b6e65de",
-  "versionName": "Point api_base_url at listing-api container",
+  "versionId": "59b13796-828a-43fb-b513-87c34f53dd60",
+  "versionName": "Loop back on report failure too",
   "description": "Webhook-driven listing readiness run: creates a listing file from posted property facts, uploads/classifies/extracts each posted document, reconciles, computes the verdict, and responds with the readout.",
   "createdAt": "2026-10-06T19:21:49.349Z",
-  "updatedAt": "2026-10-07T07:12:58.819Z",
+  "updatedAt": "2026-10-07T09:22:22.838Z",
   "settings": {
     "executionOrder": "v1",
     "availableInMCP": true,
@@ -57,7 +57,7 @@
       "parameters": {
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
-        "jsonBody": "={{ { property_address: $(\"Listing Readiness Trigger\").item.json.body.property_address, apn: $(\"Listing Readiness Trigger\").item.json.body.apn, seller_name: $(\"Listing Readiness Trigger\").item.json.body.seller_name, property_attributes: $(\"Listing Readiness Trigger\").item.json.body.property_attributes } }}",
+        "jsonBody": "={{ { property_address: $(\"Listing Readiness Trigger\").item.json.body.property_address, apn: $(\"Listing Readiness Trigger\").item.json.body.apn, seller_name: $(\"Listing Readiness Trigger\").item.json.body.seller_name, property_attributes: $(\"Listing Readiness Trigger\").item.json.body.property_attributes, idempotency_key: ($(\"Listing Readiness Trigger\").item.json.body.idempotency_key || (($(\"Listing Readiness Trigger\").item.json.body.property_address || \"\") + \"|\" + ($(\"Listing Readiness Trigger\").item.json.body.apn || \"\"))) } }}",
         "method": "POST",
         "options": {},
         "sendBody": true,
@@ -278,6 +278,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [1264, 192],
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
       "credentials": {
         "httpHeaderAuth": {
           "id": "fastapi-intake-api-key",
@@ -298,6 +302,58 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [1488, 192],
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fastapi-intake-api-key",
+          "name": "FastAPI Intake API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "jsonBody": "={{ { stage: \"CLASSIFICATION\", reason: (typeof $json.error === \"string\" ? $json.error : ($json.error?.message ?? \"node retries exhausted\")) } }}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "={{ $(\"Config\").item.json.api_base_url }}/v1/listing-files/{{ $(\"Create listing file\").item.json.id }}/documents/{{ $(\"Upload document\").item.json.document_id }}/processing-failed"
+      },
+      "id": "43fd5acc-6456-4e4f-a5eb-7f0f75af7bf5",
+      "name": "Report classify failure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1744, 448],
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fastapi-intake-api-key",
+          "name": "FastAPI Intake API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "jsonBody": "={{ { stage: \"EXTRACT\", reason: (typeof $json.error === \"string\" ? $json.error : ($json.error?.message ?? \"node retries exhausted\")) } }}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "={{ $(\"Config\").item.json.api_base_url }}/v1/listing-files/{{ $(\"Create listing file\").item.json.id }}/documents/{{ $(\"Upload document\").item.json.document_id }}/processing-failed"
+      },
+      "id": "dd3c14a9-4495-468f-86d4-076ff39b68cb",
+      "name": "Report extract failure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1968, 448],
+      "onError": "continueErrorOutput",
       "credentials": {
         "httpHeaderAuth": {
           "id": "fastapi-intake-api-key",
@@ -317,8 +373,8 @@
     },
     {
       "parameters": {
-        "content": "## Listing Readiness v1\n\nPOST JSON to /webhook/listing-readiness/v1:\n\n    { \"property_address\", \"apn\", \"seller_name\",\n      \"property_attributes\": { \"state\": \"CA\", ... },\n      \"documents\": [ { \"filename\": \"demo-ca-tds.pdf\", \"data_base64\": \"...\" } ] }\n\nConfig holds the client-tweakable variables: api_base_url (engine base URL; in-cluster default) and notification_target (webhook_response returns the full readout; any other value acknowledges only).",
-        "height": 256,
+        "content": "## Listing Readiness v1\n\nPOST JSON to /webhook/listing-readiness/v1:\n\n    { \"property_address\", \"apn\", \"seller_name\",\n      \"property_attributes\": { \"state\": \"CA\", ... },\n      \"idempotency_key\" (optional; defaults to property_address|apn),\n      \"documents\": [ { \"filename\": \"demo-ca-tds.pdf\", \"data_base64\": \"...\" } ] }\n\nConfig holds the client-tweakable variables: api_base_url (engine base URL; in-cluster default) and notification_target (webhook_response returns the full readout; any other value acknowledges only).\n\nClassify/extract retry 3x (2s fixed); an exhausted document is reported to the processing-failed review bucket and the loop continues.",
+        "height": 320,
         "width": 912,
         "color": 4
       },
@@ -367,10 +423,28 @@
       "main": [[{ "node": "Classify document", "type": "main", "index": 0 }]]
     },
     "Classify document": {
-      "main": [[{ "node": "Extract document", "type": "main", "index": 0 }]]
+      "main": [
+        [{ "node": "Extract document", "type": "main", "index": 0 }],
+        [{ "node": "Report classify failure", "type": "main", "index": 0 }]
+      ]
     },
     "Extract document": {
-      "main": [[{ "node": "Loop documents", "type": "main", "index": 0 }]]
+      "main": [
+        [{ "node": "Loop documents", "type": "main", "index": 0 }],
+        [{ "node": "Report extract failure", "type": "main", "index": 0 }]
+      ]
+    },
+    "Report classify failure": {
+      "main": [
+        [{ "node": "Loop documents", "type": "main", "index": 0 }],
+        [{ "node": "Loop documents", "type": "main", "index": 0 }]
+      ]
+    },
+    "Report extract failure": {
+      "main": [
+        [{ "node": "Loop documents", "type": "main", "index": 0 }],
+        [{ "node": "Loop documents", "type": "main", "index": 0 }]
+      ]
     },
     "Loop documents": {
       "main": [
@@ -381,19 +455,13 @@
   },
   "nodeGroups": [
     {
-      "id": "e3b32c0e-3a34-4804-9889-86f7eb71ed38",
+      "id": "8aa02e40-ad10-4d4a-91be-7a50bdf489e3",
       "name": "Open the listing file",
       "nodeNames": ["Config", "Create listing file", "Generate requirements", "Load document list", "Split documents"],
       "description": "Creates the file from the webhook's property facts, generates its requirements, and lays the submitted documents out as items."
     },
     {
-      "id": "64e9dfb4-e122-4600-9055-415f86293c0e",
-      "name": "Process every document",
-      "nodeNames": ["Loop documents", "Prepare file binary", "Upload document", "Classify document", "Extract document"],
-      "description": "Uploads each document to the engine, then classifies it and reads back its typed fields before the next one."
-    },
-    {
-      "id": "bde4021f-f6f9-4d2b-af40-7fac13dcea34",
+      "id": "7229e457-d5fd-491c-89ee-e5db6d01950d",
       "name": "Assess and report readiness",
       "nodeNames": ["Reconcile documents", "Detect exceptions", "Compute verdict", "Read final state"],
       "description": "Matches documents to requirements, rolls the states up to the file verdict, then reads the file's final state."

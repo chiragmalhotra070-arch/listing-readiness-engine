@@ -51,6 +51,7 @@ def test_review_queue_is_empty_on_fresh_file(client):
         "unmatched_documents",
         "pending_verification",
         "overdue",
+        "processing_failed",
     }
     assert body["listing_file_id"] == file_id
     assert body["exceptions"] == []

@@ -304,7 +304,7 @@ def test_every_string_column_is_classified() -> None:
             (free_form if column.info.get(FREE_FORM_TEXT_INFO) else structured).add(label)
 
     assert free_form == EXPECTED_FREE_FORM
-    assert len(free_form) + len(structured) == 75
+    assert len(free_form) + len(structured) == 76
     for label in STRUCTURED_SAMPLES:
         assert label in structured, f"{label} must be structured (rejected, not rewritten)"
 

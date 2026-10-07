@@ -132,7 +132,16 @@ def test_upload_document_rejects_content_that_is_not_a_pdf(client):
 
 
 def _upload_as(client, file_id: int, filename: str) -> int:
-    response = _upload(client, file_id, filename=filename, content=(DEMO_ROOT / "completed" / "demo-ca-tds.pdf").read_bytes())
+    # Real per-name bytes when the demo fixture exists.  Non-demo names fall
+    # back to the TDS bytes tagged with the filename (a trailing PDF comment
+    # pypdf ignores) so each logical document has its own content hash --
+    # content-hash dedup would otherwise collapse same-bytes uploads.
+    path = DEMO_ROOT / "completed" / filename
+    if path.exists():
+        content = path.read_bytes()
+    else:
+        content = (DEMO_ROOT / "completed" / "demo-ca-tds.pdf").read_bytes() + f"\n% {filename}\n".encode()
+    response = _upload(client, file_id, filename=filename, content=content)
     assert response.status_code == 201, response.text
     return response.json()["document_id"]
 
@@ -166,13 +175,15 @@ def test_classify_unknown_document_is_404(client):
     assert response.status_code == 404
 
 
-def test_classify_maps_provider_failure_to_502(client):
+def test_classify_maps_transient_provider_failure_to_503(client):
     file_id = _create_listing_file(client)["id"]
     document_id = _upload_as(client, file_id, "provider_timeout.pdf")
 
     response = client.post(f"/v1/documents/{document_id}/classify")
 
-    assert response.status_code == 502
+    # retryable LLM failure: 503 tells the orchestrator to retry the node
+    # (the old 502 conflated this with permanent failures).
+    assert response.status_code == 503
 
 
 def test_extract_returns_per_type_fields_after_classify(client):

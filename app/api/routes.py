@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import base64
 import binascii
+import hashlib
 import hmac
 from dataclasses import asdict
+from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Header, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Request, Response, UploadFile
 from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
@@ -15,7 +18,7 @@ from app.config import get_settings
 from app.db.models import Document, ListingFile, Requirement
 from app.domain.enums import DocumentType, ProcessingStage, RequirementState
 from app.db.session import get_db
-from app.schemas import AuditEventResponse, ConflictFinding, DetectExceptionsReport, DocumentInput, DocumentReclassifyRequest, DocumentReclassified, DocumentResult, EmailIntakeRequest, EmailIntakeResponse, ListingFileCreate, ListingFileCreated, ListingFileReadout, DocumentClassified, DocumentExtracted, DocumentUploaded, MissingSignatureFinding, N8nIngestRequest, OverdueRequirementFinding, ProcessingAttemptResponse, ReconciliationReport, ReadoutRequirement, RequirementActionResponse, RequirementFlagRequest, RequirementListResponse, RequirementVerifyRequest, ReviewQueue, ReviewQueueDocument, ReviewQueueItem, ReviewQueueUnmatched, VerdictResponse, RequirementSummary
+from app.schemas import AuditEventResponse, ConflictFinding, DetectExceptionsReport, DocumentInput, DocumentReclassifyRequest, DocumentReclassified, DocumentResult, EmailIntakeRequest, EmailIntakeResponse, ListingFileCreate, ListingFileCreated, ListingFileReadout, DocumentClassified, DocumentExtracted, DocumentUploaded, MissingSignatureFinding, N8nIngestRequest, OverdueRequirementFinding, ProcessingAttemptResponse, ProcessingFailedRecorded, ProcessingFailedRequest, ReconciliationReport, ReadoutRequirement, RequirementActionResponse, RequirementFlagRequest, RequirementListResponse, RequirementVerifyRequest, ReviewQueue, ReviewQueueDocument, ReviewQueueItem, ReviewQueueProcessingFailed, ReviewQueueUnmatched, VerdictResponse, RequirementSummary
 from app.adapters.document_parser import DocumentFormatError, DocumentParser, FormatExtractionResult
 from app.adapters.llm import LLMError
 from app.adapters.ocr import OCRExtractionAdapter, build_ocr_extractor
@@ -29,10 +32,35 @@ from app.services.readiness import compute_verdict
 from app.services.reconciliation import document_type_value, reconcile_listing_file, unmatched_document_ids
 from app.services.requirement_catalog import ensure_ca_catalog
 from app.services.requirement_engine import RequirementEngine
+from app.services.retry import classify_error
 from app.services.storage import LocalDocumentStorage, StorageError
 from app.services.text_sanitization import NulByteRejectedError, ensure_jsonb_value, sanitize_persisted_text
 
 router = APIRouter()
+
+
+def listing_llm_status(error: LLMError) -> int:
+    """HTTP status for a classify/extract LLM failure -- one shared mapping.
+
+    Taxonomy is the chassis's (``classify_error`` / ``FailureType``); no new
+    codes.  The per-stage split the orchestrator acts on:
+
+    * ``needs_review`` -> **422** (unchanged): a human must look at it;
+      retrying cannot help, and it must not look like a server fault.
+    * retryable -> **503**: transient -- ``LLMError.retryable`` or a
+      chassis-retryable code (``NETWORK_TIMEOUT``, ``HTTP_503``,
+      ``HTTP_429``, ``PROVIDER_UNAVAILABLE``).  n8n retries the node per
+      policy (3 attempts), then reports exhaustion to the review queue.
+    * otherwise -> **500**: permanent, non-review.  Fail fast; no retry
+      will save it, so it must not masquerade as retryable (the old 502
+      conflated all three cases).
+    """
+    if error.needs_review:
+        return 422
+    _, retryable = classify_error(error.code)
+    if error.retryable or retryable:
+        return 503
+    return 500
 
 
 def require_intake_api_key(x_intake_api_key: Optional[str] = Header(default=None)) -> None:
@@ -341,22 +369,52 @@ def persist_or_422(db: Session) -> None:
 
 
 @router.post("/listing-files", response_model=ListingFileCreated, status_code=201, dependencies=[Depends(require_intake_api_key)])
-def create_listing_file(payload: ListingFileCreate, db: Session = Depends(get_db)) -> ListingFileCreated:
+def create_listing_file(payload: ListingFileCreate, response: Response, db: Session = Depends(get_db)) -> ListingFileCreated:
     """Stage 1 of the listing workflow: create the file.
 
     Deliberately does *not* generate requirements -- generation is its own
     visible stage (and is idempotent), so the orchestrator can show it.
+
+    Idempotent on ``idempotency_key``: the same logical file posted twice
+    returns the existing row with 200 (first write stays 201).  The
+    lookup-first check serves the normal replay; the partial unique index
+    (``uq_listing_files_idempotency_key``) catches the check-then-insert
+    race, and a losing writer re-reads the winner instead of failing.
     """
     ensure_jsonb_value(payload.property_attributes, "listing_files.property_attributes")
+    if payload.idempotency_key is not None:
+        existing = (
+            db.query(ListingFile)
+            .filter(ListingFile.idempotency_key == payload.idempotency_key)
+            .first()
+        )
+        if existing is not None:
+            response.status_code = 200
+            return ListingFileCreated(id=existing.id)
     listing_file = ListingFile(
         property_address=payload.property_address,
         apn=payload.apn,
         seller_name=payload.seller_name,
         property_attributes=payload.property_attributes,
+        idempotency_key=payload.idempotency_key,
     )
     db.add(listing_file)
-    persist_or_422(db)
-    db.commit()
+    try:
+        persist_or_422(db)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        if payload.idempotency_key is None:
+            raise
+        existing = (
+            db.query(ListingFile)
+            .filter(ListingFile.idempotency_key == payload.idempotency_key)
+            .first()
+        )
+        if existing is None:
+            raise
+        response.status_code = 200
+        return ListingFileCreated(id=existing.id)
     return ListingFileCreated(id=listing_file.id)
 
 
@@ -387,11 +445,18 @@ def generate_listing_requirements(listing_file_id: int, db: Session = Depends(ge
 
 
 @router.post("/listing-files/{listing_file_id}/documents", response_model=DocumentUploaded, status_code=201, dependencies=[Depends(require_intake_api_key)])
-async def upload_listing_document(listing_file_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)) -> DocumentUploaded:
+async def upload_listing_document(listing_file_id: int, response: Response, file: UploadFile = File(...), db: Session = Depends(get_db)) -> DocumentUploaded:
     """Stage 3: store one document and record it against the file.
 
     Validated and stored through the same helpers as chassis intake; the row
     starts ``UNKNOWN`` and unclassified -- classification is its own stage.
+
+    Content-hash dedup is listing-local (inline, deliberately not the
+    chassis ``duplicate_key`` helper, which is keyed on financial-document
+    semantics): the same bytes under the same file are the same document,
+    so a replay returns the existing row with 200 instead of a second row.
+    The hash is computed the same way storage does (sha256), so a duplicate
+    is detected before anything is validated, written or inserted.
     """
     listing_file = db.get(ListingFile, listing_file_id)
     if listing_file is None:
@@ -402,6 +467,15 @@ async def upload_listing_document(listing_file_id: int, file: UploadFile = File(
     if len(filename) > 255:
         raise HTTPException(status_code=422, detail="file name is too long (maximum 255 characters)")
     content = await file.read(get_settings().max_logical_file_bytes + 1)
+    content_hash = hashlib.sha256(content).hexdigest()
+    existing = (
+        db.query(Document)
+        .filter(Document.listing_file_id == listing_file.id, Document.content_hash == content_hash)
+        .first()
+    )
+    if existing is not None:
+        response.status_code = 200
+        return DocumentUploaded(document_id=existing.id)
     stored = validate_and_store_content(content, filename=filename)
     document = Document(
         listing_file_id=listing_file.id,
@@ -528,7 +602,7 @@ def classify_listing_document(document_id: int, db: Session = Depends(get_db)) -
             extracted_data=document.extracted_data or {},
         )
     except LLMError as error:
-        raise HTTPException(status_code=422 if error.needs_review else 502, detail=str(error)) from error
+        raise HTTPException(status_code=listing_llm_status(error), detail=str(error)) from error
     normalized = ensure_extracted_fields(result.extracted_data)
     document.document_type = result.document_type
     document.classification_confidence = result.confidence
@@ -567,7 +641,7 @@ def extract_listing_document(document_id: int, db: Session = Depends(get_db)) ->
                 extracted_data={},
             )
         except LLMError as error:
-            raise HTTPException(status_code=422 if error.needs_review else 502, detail=str(error)) from error
+            raise HTTPException(status_code=listing_llm_status(error), detail=str(error)) from error
         normalized = ensure_extracted_fields(result.extracted_data)
         document.extracted_data = result.extracted_data
         document.normalized_data = normalized
@@ -703,16 +777,83 @@ def _queue_item(requirement: Requirement) -> ReviewQueueItem:
     )
 
 
+@router.post(
+    "/listing-files/{listing_file_id}/documents/{document_id}/processing-failed",
+    response_model=ProcessingFailedRecorded,
+    dependencies=[Depends(require_intake_api_key)],
+)
+def report_processing_failed(
+    listing_file_id: int,
+    document_id: int,
+    payload: ProcessingFailedRequest,
+    db: Session = Depends(get_db),
+) -> ProcessingFailedRecorded:
+    """The orchestrator reports exhausted node retries for one document.
+
+    n8n calls this on the per-document loop's error branch after the
+    classify/extract retries are spent, so one bad document is recorded for
+    a human instead of killing the other eleven.  Appends to the document's
+    ``processing_failures`` (attempt count = reports so far for that stage)
+    and writes a ``PROCESSING_FAILED`` audit event; the review queue's
+    ``processing_failed`` bucket reads the latest entry per stage.
+
+    Human remedy only -- re-upload or investigate.  No auto-retry: the
+    failure is permanent from here by definition.
+    """
+    listing_file = db.get(ListingFile, listing_file_id)
+    if listing_file is None:
+        raise HTTPException(status_code=404, detail="listing file not found")
+    document = db.get(Document, document_id)
+    if document is None or document.listing_file_id != listing_file.id:
+        raise HTTPException(status_code=404, detail="document not found")
+    stage = payload.stage.strip()
+    reason = payload.reason.strip()
+    failures = list(document.processing_failures or [])
+    attempt = sum(1 for entry in failures if entry.get("stage") == stage) + 1
+    failures.append(
+        {
+            "stage": stage,
+            "reason": reason,
+            "attempt": attempt,
+            "recorded_at": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    ensure_jsonb_value(failures, "documents.processing_failures")
+    document.processing_failures = failures
+    record_audit(
+        db,
+        document_id=document.id,
+        event_type="PROCESSING_FAILED",
+        status="FAILURE",
+        message=f"{stage} retries exhausted: {reason}",
+        details={
+            "stage": stage,
+            "reason": reason,
+            "attempt_count": attempt,
+            "actor": REVIEW_ACTOR,
+        },
+    )
+    persist_or_422(db)
+    db.commit()
+    return ProcessingFailedRecorded(
+        document_id=document.id,
+        stage=stage,
+        reason=reason,
+        attempt_count=attempt,
+    )
+
+
 @router.get("/listing-files/{listing_file_id}/review-queue", response_model=ReviewQueue, dependencies=[Depends(require_intake_api_key)])
 def get_review_queue(listing_file_id: int, db: Session = Depends(get_db)) -> ReviewQueue:
-    """The human review queue: what needs a person, in five flat buckets.
+    """The human review queue: what needs a person, in six flat buckets.
 
     A projection of current state only -- no ranking, no confidence
     threshold.  ``unknown_documents`` is a classification outcome;
     ``unmatched_documents`` carries the readout's evidence-based projection
     (unknown ones included) with each document's unmatched reason;
     ``overdue`` surfaces PENDING requirements past the configured threshold
-    without changing their state.
+    without changing their state; ``processing_failed`` shows documents the
+    orchestrator gave up on (latest exhaustion report per stage).
     """
     listing_file = db.get(ListingFile, listing_file_id)
     if listing_file is None:
@@ -762,7 +903,28 @@ def get_review_queue(listing_file_id: int, db: Session = Depends(get_db)) -> Rev
             for requirement in requirements
             if is_overdue(listing_file, requirement, threshold_days=overdue_days)
         ],
+        processing_failed=_processing_failed_rows(documents),
     )
+
+
+def _processing_failed_rows(documents: list[Document]) -> list[ReviewQueueProcessingFailed]:
+    """Latest exhaustion report per (document, stage), in document order."""
+    rows: list[ReviewQueueProcessingFailed] = []
+    for document in documents:
+        latest: dict[str, dict] = {}
+        for entry in document.processing_failures or []:
+            latest[entry.get("stage", "")] = entry
+        for stage in sorted(latest):
+            entry = latest[stage]
+            rows.append(
+                ReviewQueueProcessingFailed(
+                    document_id=document.id,
+                    stage=stage,
+                    reason=entry.get("reason", ""),
+                    attempt_count=int(entry.get("attempt", 1)),
+                )
+            )
+    return rows
 
 
 def _apply_requirement_action(

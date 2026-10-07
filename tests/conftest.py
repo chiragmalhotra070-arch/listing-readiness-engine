@@ -65,7 +65,7 @@ def isolate_llm_provider(monkeypatch):
 
 
 @pytest.fixture
-def client(tmp_path, monkeypatch) -> TestClient:
+def session_factory(tmp_path, monkeypatch):
     monkeypatch.setenv("DOCUMENT_STORAGE_ROOT", str(tmp_path / "documents"))
     monkeypatch.setenv("LLM_PROVIDER", "mock")
     monkeypatch.setenv("LLM_BASE_URL", "")
@@ -74,8 +74,12 @@ def client(tmp_path, monkeypatch) -> TestClient:
     get_settings.cache_clear()
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
-    session_factory = sessionmaker(bind=engine)
+    yield sessionmaker(bind=engine)
+    get_settings.cache_clear()
 
+
+@pytest.fixture
+def client(session_factory) -> TestClient:
     def override_get_db():
         db = session_factory()
         try:
@@ -87,3 +91,13 @@ def client(tmp_path, monkeypatch) -> TestClient:
     yield TestClient(app, headers={"X-Intake-API-Key": "dev-intake-key"})
     app.dependency_overrides.clear()
     get_settings.cache_clear()
+
+
+@pytest.fixture
+def db(session_factory):
+    """A session on the same in-memory database ``client`` writes to, so a
+    test can count rows through the persistence layer when the HTTP surface
+    has no list endpoint (idempotency/dedup proofs)."""
+    session = session_factory()
+    yield session
+    session.close()

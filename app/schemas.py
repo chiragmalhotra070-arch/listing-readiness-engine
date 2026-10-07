@@ -426,12 +426,18 @@ class SolarAgreementFields(ListingDocumentFields):
 
 
 class ListingFileCreate(BaseModel):
-    """POST /listing-files -- creates the file; generation is a later stage."""
+    """POST /listing-files -- creates the file; generation is a later stage.
+
+    ``idempotency_key`` is the orchestrator's handle for "this logical file":
+    a repeat with the same key returns the existing row (200) instead of
+    creating a duplicate.  Optional so direct/manual calls stay keyless.
+    """
 
     property_address: Optional[str] = Field(default=None, max_length=500)
     apn: Optional[str] = Field(default=None, max_length=64)
     seller_name: Optional[str] = Field(default=None, max_length=255)
     property_attributes: dict[str, Any]
+    idempotency_key: Optional[str] = Field(default=None, max_length=255)
 
     @model_validator(mode="after")
     def require_state_attribute(self) -> "ListingFileCreate":
@@ -552,14 +558,53 @@ class ReviewQueueUnmatched(BaseModel):
     reason: Literal["property_mismatch", "no_evidence"]
 
 
+class ProcessingFailedRequest(BaseModel):
+    """POST /listing-files/{file}/documents/{doc}/processing-failed -- the
+    orchestrator reports that node retries were exhausted for one document
+    at one stage.  Human remedy only (re-upload / investigate); the engine
+    never auto-retries an exhausted document."""
+
+    stage: str = Field(max_length=64)
+    reason: str = Field(max_length=2000)
+
+    @model_validator(mode="after")
+    def stage_and_reason_required(self) -> "ProcessingFailedRequest":
+        if not self.stage.strip():
+            raise ValueError("stage is required")
+        if not self.reason.strip():
+            raise ValueError("reason is required")
+        return self
+
+
+class ProcessingFailedRecorded(BaseModel):
+    """Acknowledgement: the report was recorded, with its attempt count."""
+
+    document_id: int
+    stage: str
+    reason: str
+    attempt_count: int
+
+
+class ReviewQueueProcessingFailed(BaseModel):
+    """One document whose orchestrator retries were exhausted at a stage:
+    latest report per (document, stage), ``attempt_count`` = how many times
+    exhaustion was reported there."""
+
+    document_id: int
+    stage: str
+    reason: str
+    attempt_count: int
+
+
 class ReviewQueue(BaseModel):
     """GET /listing-files/{id}/review-queue -- everything a human must act on.
 
     Flat buckets, no ranking and no confidence threshold: every requirement
     in ``EXCEPTION``, every ``RECEIVED`` requirement (pending verification),
     every ``UNKNOWN`` document, every document no requirement has evidence
-    for (with its reason), and every ``PENDING`` requirement past the
-    overdue threshold.
+    for (with its reason), every ``PENDING`` requirement past the
+    overdue threshold, and every document whose orchestrator retries were
+    exhausted (``processing_failed``).
     """
 
     listing_file_id: int
@@ -568,6 +613,7 @@ class ReviewQueue(BaseModel):
     unmatched_documents: list[ReviewQueueUnmatched]
     pending_verification: list[ReviewQueueItem]
     overdue: list[ReviewQueueItem]
+    processing_failed: list[ReviewQueueProcessingFailed]
 
 
 class ConflictFinding(BaseModel):

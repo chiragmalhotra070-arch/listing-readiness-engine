@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Optional
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -98,6 +98,11 @@ class Document(Base):
     ocr_score: Mapped[Optional[float]]
     classification_confidence: Mapped[Optional[float]]
     evidence: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, info=JSONB_REJECT_NUL)
+    #: Orchestrator-reported retry exhaustion, append-only: entries of
+    #: {stage, reason, attempt, recorded_at} written by POST
+    #: /listing-files/{file}/documents/{doc}/processing-failed.  The review
+    #: queue's processing_failed bucket reads the latest entry per stage.
+    processing_failures: Mapped[Optional[list[Any]]] = mapped_column(JSONB, info=JSONB_REJECT_NUL)
     duplicate: Mapped[bool] = mapped_column(Boolean, default=False)
     duplicate_of_document_id: Mapped[Optional[int]] = mapped_column(ForeignKey("documents.id"))
     decision: Mapped[Optional[str]] = mapped_column(String(64))
@@ -272,7 +277,21 @@ class ListingFile(Base):
 
     __tablename__ = "listing_files"
 
+    __table_args__ = (
+        # Idempotent creation: at most one file per non-null key (the
+        # check-then-insert in create_listing_file still races without this).
+        Index(
+            "uq_listing_files_idempotency_key",
+            "idempotency_key",
+            unique=True,
+            postgresql_where=text("idempotency_key IS NOT NULL"),
+            sqlite_where=text("idempotency_key IS NOT NULL"),
+        ),
+    )
+
     id: Mapped[int] = mapped_column(primary_key=True)
+    #: Orchestrator-supplied "same logical file" key; null = keyless create.
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(255))
     # Resolved property identity (canonical values; null until resolved).
     property_address: Mapped[Optional[str]] = mapped_column(String(500))
     apn: Mapped[Optional[str]] = mapped_column(String(64), index=True)

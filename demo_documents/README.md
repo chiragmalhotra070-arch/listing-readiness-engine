@@ -5,8 +5,32 @@
 - `templates/` — 12 blank field-structure templates, one per listing document type.
   Show what a complete document of each type looks like, field by field.
 - `completed/` — 12 filled dummy documents with consistent fictional data
-  (123 Main St, Pasadena, CA 91101 · APN 5842-018-024 · seller Jane Seller ·
+  (123 Main St, Pasadena CA 91101 · APN 5842-018-024 · seller Jane Seller ·
   agent Alex Agent · brokerage Demo Realty).
+
+## v2: realistic multi-page fixtures
+
+v2 (2026-10) replaced the v1 one-pagers with structurally realistic,
+multi-page documents: paragraphed sections, checkbox matrices, terms grids,
+budget and payment tables, signature blocks, and per-page initials. The
+completed TDS and SPQ are visibly hand-completed (marked boxes, pen
+explanations, one correction) while templates show the blank equivalents.
+
+Page counts are part of the fixture contract (both `template-` and `demo-`
+share them; asserted in `tests/test_demo_documents.py`):
+
+| Document | Pages | Document | Pages |
+|---|---|---|---|
+| listing-agreement | 7 | ca-nhd (statement + report) | 4 |
+| seller-advisory | 2 | wcmd-advisory (sign-only) | 1 |
+| agency-disclosure | 2 | lead-disclosure | 3 |
+| ca-tds | 3 | hoa-package (representative subset) | 10 |
+| ca-spq | 4 | prelim-title-report | 9 |
+| agent-visual-inspection | 3 | solar-agreement | 11 |
+
+Real HOA packages run 50–300+ pages; ours is a representative subset. The
+SPQ special-topics pages (8–11) are best-effort topic approximations, not
+the official form (see the builder comment in the generator).
 
 ## Important
 

@@ -1,9 +1,13 @@
-"""Demo document set: 12 synthetic templates + 12 completed dummies.
+"""Demo document set: 12 synthetic templates + 12 completed dummies (v2).
 
-The completed dummies carry the FICTIONAL TRAINING DATA marker and are
-registered as mock demo-fixture profiles, so ingesting one classifies to its
-listing type without a mock_profile.  Templates carry no marker and are
-never fixture-matched.
+v2 fixtures are structurally realistic, multi-page documents built by
+``demo_documents/generate_demo_documents.py``.  The completed dummies carry
+the FICTIONAL TRAINING DATA marker and are registered as mock demo-fixture
+profiles, so ingesting one classifies to its listing type without a
+mock_profile.  Templates carry no marker and are never fixture-matched.
+
+Page counts are part of the fixture contract: every type is multi-page
+except the sign-only WCMD advisory (one page).
 """
 
 from __future__ import annotations
@@ -18,6 +22,22 @@ from app.domain.enums import DocumentType
 
 DEMO_ROOT = Path(__file__).resolve().parent.parent / "demo_documents"
 MARKER = "FICTIONAL TRAINING DATA"
+
+# key -> exact page count for both template-<key>.pdf and demo-<key>.pdf
+PAGE_COUNTS = {
+    "listing-agreement": 7,
+    "seller-advisory": 2,
+    "agency-disclosure": 2,
+    "ca-tds": 3,
+    "ca-spq": 4,
+    "agent-visual-inspection": 3,
+    "ca-nhd": 4,
+    "wcmd-advisory": 1,
+    "lead-disclosure": 3,
+    "hoa-package": 10,
+    "prelim-title-report": 9,
+    "solar-agreement": 11,
+}
 
 COMPLETED_CASES = [
     ("demo-listing-agreement.pdf", DocumentType.LISTING_AGREEMENT),
@@ -38,6 +58,10 @@ COMPLETED_CASES = [
 def _pdf_text(path: Path) -> str:
     reader = PdfReader(str(path))
     return "\n".join(page.extract_text() or "" for page in reader.pages)
+
+
+def _page_count(path: Path) -> int:
+    return len(PdfReader(str(path)).pages)
 
 
 @pytest.mark.parametrize("filename,doc_type", COMPLETED_CASES)
@@ -79,3 +103,51 @@ def test_completed_set_covers_all_twelve_types():
     completed = sorted((DEMO_ROOT / "completed").glob("demo-*.pdf"))
     assert len(completed) == 12
     assert {path.name for path in completed} == {filename for filename, _ in COMPLETED_CASES}
+
+
+@pytest.mark.parametrize("key,expected_pages", sorted(PAGE_COUNTS.items()))
+def test_page_counts_match_the_v2_spec(key, expected_pages):
+    template = DEMO_ROOT / "templates" / f"template-{key}.pdf"
+    completed = DEMO_ROOT / "completed" / f"demo-{key}.pdf"
+    assert _page_count(template) == expected_pages, template.name
+    assert _page_count(completed) == expected_pages, completed.name
+
+
+def test_every_document_type_is_multipage_except_wcmd():
+    # Guard the brief's floor: no one-pagers beyond the sign-only WCMD.
+    for key, pages in PAGE_COUNTS.items():
+        if key == "wcmd-advisory":
+            assert pages == 1
+        else:
+            assert pages >= 2, key
+
+
+def test_completed_tds_is_visibly_hand_completed():
+    completed = _pdf_text(DEMO_ROOT / "completed" / "demo-ca-tds.pdf")
+    template = _pdf_text(DEMO_ROOT / "templates" / "template-ca-tds.pdf")
+    # Handwritten-style explanations on marked items, plus one correction.
+    assert "water heater leaking at base" in completed
+    assert "receipt on file" in completed
+    assert "corrected: NO" in completed
+    assert "claim closed 2019" in completed
+    # Templates show blank comment rules instead of the handwriting.
+    assert "water heater leaking at base" not in template
+    assert "claim closed 2019" not in template
+
+
+def test_completed_spq_is_visibly_hand_completed():
+    completed = _pdf_text(DEMO_ROOT / "completed" / "demo-ca-spq.pdf")
+    template = _pdf_text(DEMO_ROOT / "templates" / "template-ca-spq.pdf")
+    assert "pier and beam access panel added 2019" in completed
+    assert "city record 2016" in completed
+    assert "kitchen rewire 2021" in completed
+    assert "None known to seller" in completed
+    assert "pier and beam access panel added 2019" not in template
+
+
+def test_completed_documents_share_one_property_identity():
+    for path in sorted((DEMO_ROOT / "completed").glob("demo-*.pdf")):
+        text = _pdf_text(path)
+        assert "123 Main St, Pasadena, CA 91101" in text, path.name
+        assert "5842-018-024" in text, path.name
+        assert "Jane Seller" in text, path.name
